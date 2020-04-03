@@ -19,7 +19,6 @@ RUN go get -u github.com/sirupsen/logrus
 RUN go get -u go.mongodb.org/mongo-driver/mongo
 RUN go get -u golang.org/x/crypto/bcrypt
 RUN go get -u golang.org/x/oauth2/google 
-RUN go get -u golang.org/x/time 
 RUN go get -u googlemaps.github.io/maps
 
 # Copy the code into the container
