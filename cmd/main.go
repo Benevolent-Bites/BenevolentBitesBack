@@ -171,7 +171,7 @@ func HandleOAuthCode(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("bb-access", t, 3600, "/", "", http.SameSiteDefaultMode, true, false)
+	c.SetCookie("bb-access", t, 3600, "/", "", true, false)
 
 	redirect := c.Query("state")
 
