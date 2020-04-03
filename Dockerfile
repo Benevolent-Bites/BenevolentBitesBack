@@ -25,7 +25,7 @@ RUN go get -u googlemaps.github.io/maps
 COPY . .
 
 # Build server
-RUN go build ./cmd
+RUN cd ./cmd && go build
 
 # Move to /dist directory as the place for resulting binary folder
 WORKDIR /dist
