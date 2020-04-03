@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"time"
 
-	auth "../auth"
-	database "../database"
-	places "../places"
+	"github.com/rishabh-bector/BenevolentBitesBack/auth"
+	"github.com/rishabh-bector/BenevolentBitesBack/database"
+	"github.com/rishabh-bector/BenevolentBitesBack/places"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"

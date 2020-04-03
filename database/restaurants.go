@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	auth "../auth"
+	"github.com/rishabh-bector/BenevolentBitesBack/auth"
 	log "github.com/sirupsen/logrus"
 
 	"go.mongodb.org/mongo-driver/bson"

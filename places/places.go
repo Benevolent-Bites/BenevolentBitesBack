@@ -9,8 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
-	database "../database"
-
+	"github.com/rishabh-bector/BenevolentBitesBack/database"
 	log "github.com/sirupsen/logrus"
 
 	"googlemaps.github.io/maps"

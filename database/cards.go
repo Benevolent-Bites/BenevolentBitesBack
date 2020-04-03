@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	auth "../auth"
+	"github.com/rishabh-bector/BenevolentBitesBack/auth"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
