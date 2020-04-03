@@ -15,7 +15,6 @@ RUN apk add --no-cache git
 RUN go get -u github.com/gin-contrib/cors
 RUN go get -u github.com/gin-gonic/gin 
 RUN go get -u github.com/google/uuid 
-RUN go get -u github.com/sergi/go-diff 
 RUN go get -u github.com/sirupsen/logrus 
 RUN go get -u go.mongodb.org/mongo-driver 
 RUN go get -u golang.org/x/crypto 
