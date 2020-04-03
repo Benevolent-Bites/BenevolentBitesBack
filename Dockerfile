@@ -26,7 +26,7 @@ RUN cd ./cmd && go build
 WORKDIR /dist
 
 # Copy binary from build to main folder
-RUN cp /build/cmd .
+RUN cp /build/cmd/cmd .
 
 # Export necessary ports (prod and dev)
 EXPOSE 9000
