@@ -35,6 +35,7 @@ EXPOSE 9000
 EXPOSE 9001
 
 # Install sudo
+RUN apt-get update
 RUN apt -y install sudo
 
 # Start container
