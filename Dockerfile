@@ -34,10 +34,5 @@ RUN cp -r /build/templates .
 EXPOSE 9000
 EXPOSE 9001
 
-# Install sudo for Jenkins
-RUN apt -y install sudo
-RUN echo "jenkins ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-RUN chmod 777 -R /var/tmp/.net
-RUN chmod 777 -R /dist
 
 
