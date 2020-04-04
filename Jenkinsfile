@@ -2,6 +2,7 @@ pipeline {
     environment {
         registry = "rishabhbector/benevolentbites"
         registryCredential = "dockerhub"
+        dockerImage = ''
     }
 
     agent any
@@ -12,15 +13,29 @@ pipeline {
                 git 'https://github.com/rishabh-bector/BenevolentBitesBack.git'
             }
         }
-        stage('Deploy') {
+        stage('Build Docker Image') {
             when {
                 branch 'master' 
             }
             steps {
                 echo "STAGE: Deploying..."
                 script {
-                    docker.build registry + ":$BUILD_NUMBER"
+                    dockerImage = docker.build registry + ":$BUILD_NUMBER"
                 }
+            }
+        }
+        stage('Deploy Image') {
+            steps{
+                script {
+                    docker.withRegistry('', registryCredential ) {
+                        dockerImage.push()
+                    }
+                }
+            }
+        }
+        stage('Remove Unused Image') {
+            steps{
+                sh "docker rmi $registry:$BUILD_NUMBER"
             }
         }
     }
