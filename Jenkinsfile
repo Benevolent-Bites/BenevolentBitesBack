@@ -14,7 +14,6 @@ pipeline {
             }
         }
         stage('Deploy') {
-            agent { dockerfile true }
             when {
                 branch 'master' 
             }
