@@ -17,7 +17,7 @@ pipeline {
                 echo "STAGE: Deploying..."
                 withCredentials([string(credentialsId: 'OctopusAPIKey', variable: 'APIKey')]) {
                     sh """
-                        sudo chmod 777 -R /var/tmp/.net
+                        chmod 777 -R /var/tmp/.net
                         octo push --package benevolent-back.1.0.0.zip --replace-existing --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}
                         octo create-release --project "Benevolent Bites" --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}
                         octo deploy-release --project "Benevolent Bites" --version latest --deployto Integration --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}
