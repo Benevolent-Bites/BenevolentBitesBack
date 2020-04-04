@@ -41,7 +41,6 @@ RUN useradd -m docker && echo "docker:docker" | chpasswd && adduser docker sudo
 USER docker
 
 # Start container
-RUN sudo chmod 777 -R -f /dist
 RUN sudo chmod +x -f ./cmd
 CMD ["pwd"]
 
