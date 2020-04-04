@@ -29,6 +29,7 @@ RUN mkdir cmd
 RUN cp /build/cmd/cmd ./cmd
 RUN cp -r /build/assets .
 RUN cp -r /build/templates .
+RUN cp /build/start.sh .
 
 # Expose ports
 EXPOSE 9000
