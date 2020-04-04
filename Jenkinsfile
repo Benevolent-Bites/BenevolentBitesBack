@@ -17,13 +17,15 @@ pipeline {
                 branch 'master' 
             }
             steps {
-                echo "STAGE: Deploying..."
-                withCredentials([string(credentialsId: 'OctopusAPIKey', variable: 'APIKey')]) {
-                    sh """
-                        octo push --package benevolent-back.1.0.0.zip --replace-existing --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}
-                        octo create-release --project "Benevolent Bites" --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}
-                        octo deploy-release --project "Benevolent Bites" --version latest --deployto Integration --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}
-                    """
+                dir(path: '/dist') {
+                    echo "STAGE: Deploying..."
+                    withCredentials([string(credentialsId: 'OctopusAPIKey', variable: 'APIKey')]) {
+                        sh """
+                            octo push --package benevolent-back.1.0.0.zip --replace-existing --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}
+                            octo create-release --project "Benevolent Bites" --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}
+                            octo deploy-release --project "Benevolent Bites" --version latest --deployto Integration --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}
+                        """
+                    }
                 }
             }
         }
