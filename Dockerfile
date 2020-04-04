@@ -44,6 +44,6 @@ USER docker
 
 # Start container
 RUN sudo chmod +x -f ./cmd
-CMD ["pwd"]
+CMD ["sudo", "./cmd"]
 
 
