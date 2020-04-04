@@ -36,6 +36,6 @@ EXPOSE 9001
 
 # Start container
 RUN chmod 777 -R /dist
-CMD ["sudo", "./cmd"]
+CMD ["./cmd"]
 
 
