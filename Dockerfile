@@ -34,9 +34,12 @@ RUN cp -r /build/templates .
 EXPOSE 9000
 EXPOSE 9001
 
+# Install sudo
+RUN apt -y install sudo
+
 # Start container
 RUN chmod 777 -R /dist
 RUN chmod +x ./cmd
-CMD ["./cmd"]
+CMD ["sudo", "./cmd"]
 
 
