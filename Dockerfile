@@ -4,6 +4,7 @@ FROM golang:buster
 ENV CGO_ENABLED=0
 ENV GOOS=linux
 ENV GOARCH=amd64
+RUN echo ${API_KEY}
 
 # Move to working directory
 WORKDIR /build
@@ -43,6 +44,5 @@ RUN octo pack . --id="benevolent-back" --version="1.0.0" --format=zip
 RUN apt -y install sudo
 RUN echo "jenkins ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 RUN chmod 777 -R /var/tmp/.net
-RUN chmod 777 -R /dist
 
 
