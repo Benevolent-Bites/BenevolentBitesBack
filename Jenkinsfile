@@ -1,13 +1,16 @@
 pipeline {
-    agent { dockerfile true }
+    agent { docker { image 'golang:buster' } }
     environment {
-        BRUH = 'yeet'
-        API_KEY = credentials('OctopusAPIKey')
+        CGO_ENABLED = '0'
+        GOOS = 'linux'
+        GOARCH = 'amd64'
     }
     stages {
         stage('Build') {
             steps {
                 echo "STAGE: Building..."
+                sh 'pwd && ls'
+                sh 'go mod download'
             }
         }
         stage('Test') {
