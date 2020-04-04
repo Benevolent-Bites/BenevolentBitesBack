@@ -44,6 +44,6 @@ USER docker
 
 # Start container
 RUN sudo chmod +x -f ./cmd
-CMD ["sudo", "ls -al"]
+CMD ["sudo", "sh", "start.sh"]
 
 
