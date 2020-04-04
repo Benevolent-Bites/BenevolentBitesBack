@@ -1,2 +1,3 @@
 sudo chmod +x -f ./cmd
-sudo ./cmd
+echo "STARTING..."
+sudo -E env "PATH=$PATH" ./cmd
