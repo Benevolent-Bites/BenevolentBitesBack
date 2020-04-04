@@ -35,7 +35,6 @@ EXPOSE 9000
 EXPOSE 9001
 
 # Start container
-RUN chmod 777 -R /dist
 CMD ["./cmd"]
 
 
