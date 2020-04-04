@@ -37,8 +37,8 @@ pipeline {
             }
             steps {
                 withCredentials([string(credentialsId: 'OctopusAPIKey', variable: 'APIKey')]) {	                
-                    sh 'octo create-release --project "Benevolent Bites" --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}'
-                    sh 'octo deploy-release --project "Benevolent Bites" --version latest --deployto DEV --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}'         
+                    sh 'sudo octo create-release --project "Benevolent Bites" --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}'
+                    sh 'sudo octo deploy-release --project "Benevolent Bites" --version latest --deployto DEV --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}'         
                 }
             }
         }
