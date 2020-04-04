@@ -13,6 +13,9 @@ pipeline {
             }
         }
         stage('Deploy') {
+            when {
+                branch 'master' 
+            }
             steps {
                 echo "STAGE: Deploying..."
                 withCredentials([string(credentialsId: 'OctopusAPIKey', variable: 'APIKey')]) {
