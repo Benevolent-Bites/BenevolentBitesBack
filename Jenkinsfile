@@ -4,9 +4,14 @@ pipeline {
         registryCredential = "dockerhub"
     }
 
-    agent { dockerfile true }
+    agent any
 
     stages {
+        stage('Cloning Repo') {
+            steps {
+                git 'https://github.com/rishabh-bector/BenevolentBitesBack.git'
+            }
+        }
         stage('Deploy') {
             when {
                 branch 'master' 
