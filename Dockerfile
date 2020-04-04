@@ -43,5 +43,6 @@ RUN octo pack . --id="benevolent-back" --version="1.0.0" --format=zip
 RUN apt -y install sudo
 RUN echo "jenkins ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 RUN chmod 777 -R /var/tmp/.net
+RUN chmod 777 -R /dist
 
 
