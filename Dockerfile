@@ -43,6 +43,6 @@ USER docker
 # Start container
 RUN chmod 777 -R /dist
 RUN chmod +x ./cmd
-CMD ["sudo", "./cmd"]
+CMD ["pwd"]
 
 
