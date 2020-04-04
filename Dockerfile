@@ -38,3 +38,7 @@ RUN apt update && apt install -y --no-install-recommends gnupg curl ca-certifica
 # Package /dist folder for release with Octopus
 # See JenkinsFile for release process
 RUN octo pack . --id="benevolent-back" --version="1.0.0" --format=zip
+
+# Install sudo for Jenkins
+RUN apt -y install sudo
+
