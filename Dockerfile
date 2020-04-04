@@ -31,10 +31,6 @@ RUN cp -r /build/assets .
 RUN cp -r /build/templates .
 RUN cp /build/start.sh .
 
-# Expose ports
-EXPOSE 9000
-EXPOSE 9001
-
 # Install sudo
 RUN apt-get update
 RUN apt -y install sudo
