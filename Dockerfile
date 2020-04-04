@@ -29,6 +29,7 @@ RUN cp -r /build/assets .
 RUN cp -r /build/templates .
 
 # Install Octopus CLI for deployment
+RUN [ -z "$DOTNET_BUNDLE_EXTRACT_BASE_DIR" ] && export DOTNET_BUNDLE_EXTRACT_BASE_DIR="${XDG_CACHE_HOME:-"$HOME"/.cache}/dotnet_bundle_extract"
 RUN apt update && apt install -y --no-install-recommends gnupg curl ca-certificates apt-transport-https && \
     curl -sSfL https://apt.octopus.com/public.key | apt-key add - && \
     sh -c "echo deb https://apt.octopus.com/ stable main > /etc/apt/sources.list.d/octopus.com.list" && \
