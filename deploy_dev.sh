@@ -1,0 +1,3 @@
+echo "Yeet"
+pwd
+ls
