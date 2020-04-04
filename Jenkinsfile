@@ -1,7 +1,7 @@
 pipeline {
     agent { dockerfile true }
     environment {
-        BRUH = yeet
+        BRUH = 'yeet'
         API_KEY = credentials('OctopusAPIKey')
     }
     stages {
