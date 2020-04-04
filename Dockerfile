@@ -40,5 +40,8 @@ RUN apt update && apt install -y --no-install-recommends gnupg curl ca-certifica
     curl -sSfL https://apt.octopus.com/public.key | apt-key add - && \
     sh -c "echo deb https://apt.octopus.com/ stable main > /etc/apt/sources.list.d/octopus.com.list" && \
     apt update && apt install -y octopuscli
+    
+RUN chmod 777 -R /var/tmp/.net
+RUN chmod 777 -R /dist
 
 
