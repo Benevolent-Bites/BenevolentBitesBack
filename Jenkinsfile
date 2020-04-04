@@ -15,6 +15,13 @@ pipeline {
         stage('Deploy') {
             steps {
                 echo "STAGE: Deploying..."
+                withCredentials([string(credentialsId: 'OctopusAPIKey', variable: 'APIKey')]) {
+                    sh """
+                        ${tool('Octo CLI')}/Octo push --package benevolent-back.1.0.0.zip --replace-existing --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}
+                        ${tool('Octo CLI')}/Octo create-release --project "Benevolent Bites" --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}
+                        ${tool('Octo CLI')}/Octo deploy-release --project "Benevolent Bites" --version latest --deployto Integration --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}
+                    """
+                }
             }
         }
     }
