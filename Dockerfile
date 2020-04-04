@@ -34,8 +34,6 @@ RUN cp -r /build/templates .
 EXPOSE 9000
 EXPOSE 9001
 
-RUN chmod 777 -R /dist
-
 # Start container
 CMD ["./cmd"]
 
