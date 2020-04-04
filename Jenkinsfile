@@ -1,16 +1,10 @@
 pipeline {
-    agent { docker { image 'golang:buster' } }
-    environment {
-        CGO_ENABLED = '0'
-        GOOS = 'linux'
-        GOARCH = 'amd64'
-    }
+    agent { dockerfile true }
+
     stages {
         stage('Build') {
             steps {
                 echo "STAGE: Building..."
-                sh 'pwd && ls'
-                sh 'go mod download'
             }
         }
         stage('Test') {
