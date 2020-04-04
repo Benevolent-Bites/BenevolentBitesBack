@@ -1,4 +1,4 @@
-FROM golang:alpine
+FROM golang:buster
 
 # Set necessary environment variables
 ENV CGO_ENABLED=0
@@ -7,9 +7,6 @@ ENV GOARCH=amd64
 
 # Move to working directory
 WORKDIR /build
-
-# Install git
-RUN apk add --no-cache git
 
 # Copy and download golang depedencies
 COPY go.mod .
@@ -32,10 +29,10 @@ RUN cp -r /build/assets .
 RUN cp -r /build/templates .
 
 # Install Octopus CLI for deployment
-RUN sudo apt update && sudo apt install --no-install-recommends gnupg curl ca-certificates apt-transport-https && \
-    curl -sSfL https://apt.octopus.com/public.key | sudo apt-key add - && \
-    sudo sh -c "echo deb https://apt.octopus.com/ stable main > /etc/apt/sources.list.d/octopus.com.list" && \
-    sudo apt update && sudo apt install octopuscli
+RUN apt update && apt install -y --no-install-recommends gnupg curl ca-certificates apt-transport-https && \
+    curl -sSfL https://apt.octopus.com/public.key | apt-key add - && \
+    sh -c "echo deb https://apt.octopus.com/ stable main > /etc/apt/sources.list.d/octopus.com.list" && \
+    apt update && apt install -y octopuscli
 
 # Package /dist folder for release with Octopus
 # See JenkinsFile for release process
