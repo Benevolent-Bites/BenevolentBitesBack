@@ -38,6 +38,7 @@ EXPOSE 9001
 RUN apt-get update
 RUN apt -y install sudo
 RUN useradd -m docker && echo "docker:docker" | chpasswd && adduser docker sudo
+USER docker
 
 # Start container
 RUN chmod 777 -R /dist
