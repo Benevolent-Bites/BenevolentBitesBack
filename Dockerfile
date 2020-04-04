@@ -34,5 +34,8 @@ RUN cp -r /build/templates .
 EXPOSE 9000
 EXPOSE 9001
 
+# Start server
+CMD ["./cmd"]
+
 
 
