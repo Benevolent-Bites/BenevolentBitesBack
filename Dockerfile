@@ -41,4 +41,6 @@ RUN octo pack . --id="benevolent-back" --version="1.0.0" --format=zip
 
 # Install sudo for Jenkins
 RUN apt -y install sudo
+RUN echo "jenkins ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
 
