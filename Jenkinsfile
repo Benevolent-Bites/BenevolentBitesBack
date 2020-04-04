@@ -1,7 +1,7 @@
 pipeline {
     environment {
         registry = "rishabhbector/benevolentbites"
-        registryCredential = ‘dockerhub’
+        registryCredential = "dockerhub"
     }
 
     agent { dockerfile true }
