@@ -8,15 +8,12 @@ pipeline {
     agent any
 
     stages {
-        stage('Cloning Repo') {
+        stage('Clone Repo') {
             steps {
                 git 'https://github.com/rishabh-bector/BenevolentBitesBack.git'
             }
         }
-        stage('Build Docker Image') {
-            when {
-                branch 'master' 
-            }
+        stage('Build Image') {
             steps {
                 echo "STAGE: Deploying..."
                 script {
@@ -24,12 +21,24 @@ pipeline {
                 }
             }
         }
-        stage('Deploy Image') {
-            steps{
+        stage('Push Image') {
+            steps {
                 script {
                     docker.withRegistry('', registryCredential ) {
                         dockerImage.push()
                     }
+                }
+            }
+        }
+        // Only create automatic release for DEV
+        stage('Deploy DEV') {
+            when {
+                branch 'master'
+            }
+            steps {
+                withCredentials([string(credentialsId: 'OctopusAPIKey', variable: 'APIKey')]) {	                
+                    sh 'octo create-release --project "Benevolent Bites" --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}'
+                    sh 'octo deploy-release --project "Benevolent Bites" --version latest --deployto DEV --server https://benevolentbites.octopus.app/ --apiKey ${APIKey}'         
                 }
             }
         }
