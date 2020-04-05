@@ -33,7 +33,7 @@ USER docker
 # Make sure Python is installed
 RUN sudo apt -y upgrade
 RUN sudo apt install -y python3-pip
-RUN pip3 install click requests json
+RUN pip3 install click requests
 
 # Start container
 RUN sudo chmod +x -f ./cmd
