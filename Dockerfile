@@ -20,16 +20,7 @@ COPY . .
 
 # Build server
 RUN cd ./cmd && go build
-
-# Move to /dist directory as the place for resulting binary folder
-WORKDIR /dist
-
-# Copy necessary files along with the binary
-RUN mkdir cmd
-RUN cp /build/cmd/cmd ./cmd
-RUN cp -r /build/assets .
-RUN cp -r /build/templates .
-RUN cp /build/start.sh .
+WORKDIR /build
 
 # Install sudo
 RUN apt-get update
