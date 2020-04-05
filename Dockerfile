@@ -30,8 +30,11 @@ RUN adduser docker sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER docker
 
+# Make sure Python is installed
+RUN sudo apt -y upgrade
+RUN apt install -y python3-pip
+RUN pip3 install click requests json
+
 # Start container
 RUN sudo chmod +x -f ./cmd
 CMD ["sudo", "-E", "./cmd"]
-
-
