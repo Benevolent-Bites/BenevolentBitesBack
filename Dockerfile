@@ -32,7 +32,7 @@ USER docker
 
 # Make sure Python is installed
 RUN sudo apt -y upgrade
-RUN apt install -y python3-pip
+RUN sudo apt install -y python3-pip
 RUN pip3 install click requests json
 
 # Start container
