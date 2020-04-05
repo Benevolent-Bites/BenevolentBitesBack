@@ -20,7 +20,7 @@ COPY . .
 
 # Build server
 RUN cd ./cmd && go build
-WORKDIR /build
+WORKDIR /build/cmd
 
 # Install sudo
 RUN apt-get update
@@ -32,7 +32,6 @@ USER docker
 
 # Start container
 RUN sudo chmod +x -f ./cmd
-RUN sudo chmod +x -f ./start.sh
-CMD ["cd ./cmd &&", "sudo", "-E", "./cmd"]
+CMD ["sudo", "-E", "./cmd"]
 
 
