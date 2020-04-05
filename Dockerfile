@@ -4,8 +4,6 @@ FROM golang:buster
 ENV CGO_ENABLED=0
 ENV GOOS=linux
 ENV GOARCH=amd64
-RUN echo ${API_KEY}
-RUN echo $BRUH
 
 # Move to working directory
 WORKDIR /build
