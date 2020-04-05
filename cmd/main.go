@@ -82,6 +82,7 @@ func main() {
 
 	log.SetLevel(log.InfoLevel)
 	log.Info("BB: S T A R T I N G !")
+	log.Info("ENVIRONMENT: ", os.Getenv("S_ENV"))
 
 	auth.Initialize()
 	database.Initialize()

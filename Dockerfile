@@ -18,29 +18,21 @@ COPY . .
 
 # Build server
 RUN cd ./cmd && go build
-
-# Move to /dist directory as the place for resulting binary folder
-WORKDIR /dist
-
-# Copy necessary files along with the binary
-RUN mkdir cmd
-RUN cp /build/cmd/cmd ./cmd
-RUN cp -r /build/assets .
-RUN cp -r /build/templates .
-
-# Expose ports
-EXPOSE 9000
-EXPOSE 9001
+WORKDIR /build/cmd
 
 # Install sudo
 RUN apt-get update
 RUN apt -y install sudo
-RUN useradd -m docker && echo "docker:docker" | chpasswd && adduser docker sudo
+RUN adduser --disabled-password --gecos '' docker
+RUN adduser docker sudo
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER docker
 
+# Make sure Python is installed
+RUN sudo apt -y upgrade
+RUN sudo apt install -y python3-pip
+RUN pip3 install click requests
+
 # Start container
-RUN chmod 777 -R /dist
-RUN chmod +x ./cmd
-CMD ["sudo", "./cmd"]
-
-
+RUN sudo chmod +x -f ./cmd
+CMD ["sudo", "-E", "./cmd"]
