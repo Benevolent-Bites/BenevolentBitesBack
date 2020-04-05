@@ -20,17 +20,14 @@ COPY . .
 RUN cd ./cmd && go build
 WORKDIR /build/cmd
 
-# Install sudo
-RUN apt-get update
-RUN apt -y install sudo
+# Install sudo & Python
+RUN apt-get update && apt -y install sudo python3-pip
 RUN adduser --disabled-password --gecos '' docker
 RUN adduser docker sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER docker
 
 # Make sure Python is installed
-RUN sudo apt -y upgrade
-RUN sudo apt install -y python3-pip
 RUN pip3 install click requests
 
 # Start container

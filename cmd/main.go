@@ -91,7 +91,7 @@ func main() {
 	Router = gin.Default()
 
 	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{os.Getenv("S_CORS"), "https://api.benevolentbites.tech"}
+	config.AllowOrigins = []string{os.Getenv("S_CORS")}
 	config.AllowCredentials = true
 	config.AllowMethods = []string{"POST", "GET", "OPTIONS"}
 	config.AllowHeaders = []string{"Origin", "Content-Type"}
@@ -141,7 +141,7 @@ func Healthcheck(c *gin.Context) {
 func StartRESTOAuth2Flow(c *gin.Context) {
 	r := c.Query("redirect")
 	if r == "" {
-		r = "https://benevolentbites.tech/restaurants?a=b"
+		r = fmt.Sprintf("%s/restaurants?a=b", os.Getenv("S_FRONT"))
 	}
 	c.Redirect(307, auth.GetRedirectToGoogle(r))
 }
@@ -151,7 +151,7 @@ func StartRESTOAuth2Flow(c *gin.Context) {
 func StartUSEROAuth2Flow(c *gin.Context) {
 	r := c.Query("redirect")
 	if r == "" {
-		r = "https://benevolentbites.tech/users?a=b"
+		r = fmt.Sprintf("%s/users?a=b", os.Getenv("S_FRONT"))
 	}
 	c.Redirect(307, auth.GetRedirectToGoogle(r))
 }
@@ -160,24 +160,28 @@ func StartUSEROAuth2Flow(c *gin.Context) {
 func HandleOAuthCode(c *gin.Context) {
 	t := auth.GetTokenFromOAuthCode(c.Query("code")).Extra("id_token").(string)
 
+	redirect := c.Query("state")
+
 	u := database.ValidateUser(t)
 	if u.Email == "nil" {
 		log.Error("BB: Unable to validate token")
 		c.Data(200, "text/html", []byte(
-			fmt.Sprintf("<html><script>window.location=\"%s/restaurants&login=%s&error=%s\";</script></html>",
-				os.Getenv("S_FRONT"),
+			fmt.Sprintf("<html><body onload=\"window.location.replace('%s/restaurants&login=%s&error=%s')\"/></html>",
+				redirect,
 				"fail",
 				"unable to validate token",
 			)))
 		return
 	}
 
-	c.SetCookie("bb-access", t, 3600, "/", "", true, false)
-
-	redirect := c.Query("state")
+	secure := true
+	if os.Getenv("S_ENV") == "LOCAL" {
+		secure = false
+	}
+	c.SetCookie("bb-access", t, 3600, "/", "", secure, false)
 
 	c.Data(200, "text/html", []byte(
-		fmt.Sprintf("<html><script>window.location=\"%s&login=%s&error=%s\";</script></html>",
+		fmt.Sprintf("<html><body onload=\"window.location.replace('%s&login=%s&error=%s');\"/></html>",
 			redirect,
 			"success",
 			"none",
@@ -424,7 +428,7 @@ func HandleSquareOAuthCode(c *gin.Context) {
 	square, err := auth.GetTokenFromSquareAuthCode(c.Query("code"))
 	if err != nil {
 		c.Data(200, "text/html", []byte(
-			fmt.Sprintf("<html><script>window.location=\"%s/restaurants?square=%s&error=%s\";</script></html>",
+			fmt.Sprintf("<html><body onload=\"window.location.replace('%s/restaurants?square=%s&error=%s')\"/></html>",
 				os.Getenv("S_FRONT"),
 				"fail",
 				err.Error(),
@@ -435,7 +439,7 @@ func HandleSquareOAuthCode(c *gin.Context) {
 	err = database.UpdateRestaurantSquareAuth(owner, square)
 	if err != nil {
 		c.Data(200, "text/html", []byte(
-			fmt.Sprintf("<html><script>window.location=\"%s/restaurants?square=%s&error=%s\";</script></html>",
+			fmt.Sprintf("<html><body onload=\"window.location.replace('%s/restaurants?square=%s&error=%s')\"/></html>",
 				os.Getenv("S_FRONT"),
 				"fail",
 				err.Error(),
@@ -444,7 +448,7 @@ func HandleSquareOAuthCode(c *gin.Context) {
 	}
 
 	c.Data(200, "text/html", []byte(
-		fmt.Sprintf("<html><script>window.location=\"%s/restaurants?square=%s&error=%s\";</script></html>",
+		fmt.Sprintf("<html><body onload=\"window.location.replace('%s/restaurants?square=%s&error=%s')\"/></html>",
 			os.Getenv("S_FRONT"),
 			"success",
 			"none",
