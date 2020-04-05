@@ -33,6 +33,6 @@ USER docker
 # Start container
 RUN sudo chmod +x -f ./cmd
 RUN sudo chmod +x -f ./start.sh
-CMD ["sudo", "-E", "./cmd/cmd"]
+CMD ["cd ./cmd &&", "sudo", "-E", "./cmd"]
 
 
