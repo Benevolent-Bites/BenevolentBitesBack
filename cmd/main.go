@@ -673,14 +673,12 @@ func SearchCoords(c *gin.Context) {
 func GetRestaurantDetails(c *gin.Context) {
 	rest := c.Query("restId")
 
-	var dbRest database.Restaurant
-	if c.Query("place") == "false" {
-		dbRest = database.DoesRestaurantExistUUID(rest)
-		if dbRest.Owner == "nil" {
-			c.JSON(403, gin.H{"error": "sorry bro, unable to find that restaurant"})
-		}
+	dbRest := database.DoesRestaurantExistUUID(rest)
+	if dbRest.Owner == "nil" {
+		c.JSON(403, gin.H{"error": "sorry bro, unable to find that restaurant"})
+		return
 	}
-
+	
 	c.JSON(200, gin.H{"name": dbRest.Name})
 }
 

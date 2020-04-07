@@ -14,23 +14,21 @@ import (
 
 type Restaurant struct {
 	// Mutable
-	Owner        string `bson:"owner" json:"owner"`
-	ContactEmail string `bson:"contact" json:"contact"`
-	Name         string `bson:"name" json:"name"`
-	Address      string `bson:"address" json:"address"`
-	City         string `bson:"city" json:"city"`
-	State        string `bson:"state" json:"state"`
-	Zip          string `bson:"zip" json:"zip"`
-	Website      string `bson:"website" json:"website"`
-	Yelp         string `bson:"yelp" json:"yelp"`
-	Description  string `bson:"description" json:"description"`
+	Owner                  string `bson:"owner" json:"owner"`
+	ContactEmail           string `bson:"contact" json:"contact"`
+	Name                   string `bson:"name" json:"name"`
+	Address                string `bson:"address" json:"address"`
+	City                   string `bson:"city" json:"city"`
+	State                  string `bson:"state" json:"state"`
+	Zip                    string `bson:"zip" json:"zip"`
+	Website                string `bson:"website" json:"website"`
+	Yelp                   string `bson:"yelp" json:"yelp"`
+	Description            string `bson:"description" json:"description"`
+	Employees []map[string]string `bson:"employees" json:"employees"`
 
 	// Constant
-	UUID    string `bson:"uuid" json:"uuid"`
-	PlaceID string `bson:"placeId" json:"placeId"`
-
-	Employees []string `bson:"employees" json:"employees"`
-
+	UUID     string `bson:"uuid" json:"uuid"`
+	PlaceID  string `bson:"placeId" json:"placeId"`
 	PassHash string `bson:"passHash" json:"passHash"`
 }
 
@@ -84,6 +82,7 @@ func DoesRestaurantExist(email string) Restaurant {
 		return NilRestaurant
 	}
 	cur.Decode(&result)
+
 	return result
 }
 
@@ -156,11 +155,11 @@ func MergeRestaurants(uOld, uNew Restaurant) Restaurant {
 			}
 		} else {
 			if k == "employees" {
-				if vcArray, ok := v.([]interface{}); ok {
+				if vcArray, ok := v.([]map[string]string); ok {
 					if len(vcArray) > 0 {
-						mOut[k] = []string{}
+						mOut[k] = []map[string]string{}
 						for _, v2 := range vcArray {
-							mOut[k] = append(mOut[k].([]string), v2.(string))
+							mOut[k] = append(mOut[k].([]map[string]string), v2)
 						}
 					}
 				}

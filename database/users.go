@@ -31,7 +31,7 @@ type User struct {
 var NilUser = User{Email: "nil"}
 var SuccessUser = User{Email: "success"}
 
-// UpdateUser updates existing user details
+// UpdateUser updates existing user details, or adds new user if none exists
 func UpdateUser(email string, u User) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
