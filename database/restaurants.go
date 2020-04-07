@@ -14,17 +14,17 @@ import (
 
 type Restaurant struct {
 	// Mutable
-	Owner                  string `bson:"owner" json:"owner"`
-	ContactEmail           string `bson:"contact" json:"contact"`
-	Name                   string `bson:"name" json:"name"`
-	Address                string `bson:"address" json:"address"`
-	City                   string `bson:"city" json:"city"`
-	State                  string `bson:"state" json:"state"`
-	Zip                    string `bson:"zip" json:"zip"`
-	Website                string `bson:"website" json:"website"`
-	Yelp                   string `bson:"yelp" json:"yelp"`
-	Description            string `bson:"description" json:"description"`
-	Employees []map[string]string `bson:"employees" json:"employees"`
+	Owner        string              `bson:"owner" json:"owner"`
+	ContactEmail string              `bson:"contact" json:"contact"`
+	Name         string              `bson:"name" json:"name"`
+	Address      string              `bson:"address" json:"address"`
+	City         string              `bson:"city" json:"city"`
+	State        string              `bson:"state" json:"state"`
+	Zip          string              `bson:"zip" json:"zip"`
+	Website      string              `bson:"website" json:"website"`
+	Yelp         string              `bson:"yelp" json:"yelp"`
+	Description  string              `bson:"description" json:"description"`
+	Employees    []map[string]string `bson:"employees" json:"employees"`
 
 	// Constant
 	UUID     string `bson:"uuid" json:"uuid"`
@@ -155,11 +155,12 @@ func MergeRestaurants(uOld, uNew Restaurant) Restaurant {
 			}
 		} else {
 			if k == "employees" {
-				if vcArray, ok := v.([]map[string]string); ok {
+				if vcArray, ok := v.([]interface{}); ok {
 					if len(vcArray) > 0 {
-						mOut[k] = []map[string]string{}
+						mOut[k] = []map[string]interface{}{}
 						for _, v2 := range vcArray {
-							mOut[k] = append(mOut[k].([]map[string]string), v2)
+							var v3 = v2.(map[string]interface{})
+							mOut[k] = append(mOut[k].([]map[string]interface{}), v3)
 						}
 					}
 				}
