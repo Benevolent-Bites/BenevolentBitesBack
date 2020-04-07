@@ -481,17 +481,27 @@ func BeginPaymentFlow(c *gin.Context) {
 		return
 	}
 
+	// Find restaurant owner user (square payment recipient)
+	u := database.DoesUserExist(r.Owner)
+	if u.Email == "nil" {
+		processCardError(c, "sorry bro, unable to find your user")
+		return
+	}
+
 	amount, err := strconv.Atoi(c.Query("amount"))
 	if err != nil {
 		c.JSON(403, gin.H{"error": "sorry bro, invalid amount"})
 	}
+	amountCents := int(amount * 100.0)
 
-	c.HTML(http.StatusOK, "form.tmpl", gin.H{
-		"app_id":      os.Getenv("SQ_APPID"),
-		"amount":      float64(amount) / 100.0,
-		"restaurant":  c.Query("restId"),
-		"user":        email,
-		"location_id": "",
+	requestData, err := json.Marshal(map[string]interface{}{
+		"idempotency_key": auth.GenerateUUID(),
+		"autocomplete":    true,
+		"amount_money": map[string]interface{}{
+			"amount":   amountCents,
+			"currency": "USD",
+		},
+		"source_id": data.Nonce,
 	})
 }
 

@@ -74,6 +74,74 @@ func GetTokenFromSquareAuthCode(code string) (SquareAuth, error) {
 	return SquareAuth{}, errors.New("unable to find square access token")
 }
 
+type Location struct {
+	id          string `json:"id"`
+	address     string `json:"address"`
+	name        string `json:"name"`
+	description string `json:"description"`
+}
+
+func GetLocations(token string) ([]Location, error) {
+	request, err := http.NewRequest("GET", "https://connect.squareup.com/v2/locations")
+	request.Header.Set("Content-Type", "application/json")
+
+	authHeader := fmt.Sprintf("Bearer %s", token)
+	request.Header.Set("Authorization", authHeader)
+	if err != nil {
+		log.Error(err)
+		return []Location{}, err
+	}
+
+	timeout := time.Duration(5 * time.Second)
+	client := http.Client{
+		Timeout: timeout,
+	}
+
+	resp, err := client.Do(request)
+	if err != nil {
+		log.Error(err)
+		return []Location{}, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Error(err)
+		return []Location{}, err
+	}
+
+	var rjson map[string][]map[string]interface{}
+	err = json.Unmarshal(body, &rjson)
+	if err != nil {
+		log.Error(err)
+		return []Location{}, err
+	}
+
+	if locations, ok := rjson["locations"]; ok {
+		output := make([]Location, len(locations))
+		for _, v := range locations {
+			add := v["address"].(map[string]string)
+			addLine1 := add["address_line_1"]
+			addState := add["administrative_district_level_1"]
+			addCity := add["locality"]
+			addZip := add["postal_code"]
+			var description string
+			if desc, ok := v["description"]; ok {
+				description = desc
+			}
+			output = append(output, Location{
+				id:          v["id"].(string),
+				address:     fmt.Sprintf("%s %s, %s %s", addLine1, addCity, addState, addZip),
+				name:        v["name"].(string),
+				description: description,
+			})
+		}
+		return output, nil
+	}
+
+	return []Location{}, errors.New("unable to find locations")
+}
+
 func RefreshAccessToken(s *SquareAuth) error {
 	requestData, err := json.Marshal(map[string]string{
 		"client_id":     os.Getenv("SQ_APPID"),
