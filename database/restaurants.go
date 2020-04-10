@@ -27,9 +27,10 @@ type Restaurant struct {
 	Employees    []map[string]string `bson:"employees" json:"employees"`
 
 	// Constant
-	UUID     string `bson:"uuid" json:"uuid"`
-	PlaceID  string `bson:"placeId" json:"placeId"`
-	PassHash string `bson:"passHash" json:"passHash"`
+	UUID       string `bson:"uuid" json:"uuid"`
+	PlaceID    string `bson:"placeId" json:"placeId"`
+	PassHash   string `bson:"passHash" json:"passHash"`
+	LocationID string `bson:"locationId" json:"locationId"`
 }
 
 // UpdateRestaurant adds a new restaurant into the DB if it doesn't yet exist

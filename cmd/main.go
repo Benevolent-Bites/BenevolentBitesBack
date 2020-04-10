@@ -1,14 +1,10 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
+	//"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/rishabh-bector/BenevolentBitesBack/auth"
 	"github.com/rishabh-bector/BenevolentBitesBack/database"
@@ -39,6 +35,8 @@ import (
 // /rest/signup - creates a new restaurant
 // /rest/getinfo - returns all info
 // /rest/setinfo - sets all info
+// /rest/getlocations - gets all associated locations from square API
+// /rest/setlocation - sets location for a restaurant
 // /rest/getdetails - returns detailed info about a restaurant using Google's API
 // /rest/redeemcard - allows restaurant to subtract credit from their issued cards
 // /rest/setpassword - allows restaurant owner to set a password for staff to redeem customer cards
@@ -48,7 +46,6 @@ import (
 //
 // /square/signup - redirect user to square login
 // /square/oauth - redirected to by Square, exchanges auth code
-// /square/processcard - called by the credit card form, completes a payment
 //
 // Users:
 //
@@ -116,6 +113,8 @@ func main() {
 	Router.POST("/rest/setinfo", SetRestaurantInfo)
 	Router.POST("/rest/setpassword", SetRestaurantPassword)
 	Router.POST("/rest/redeemcard", RedeemCard)
+	Router.GET("/rest/getlocations", GetLocations)
+	Router.GET("/rest/setlocation", SetLocation)
 
 	Router.GET("/user/signup", StartUSEROAuth2Flow)
 	Router.GET("/user/getinfo", GetUserInfo)
@@ -126,7 +125,7 @@ func main() {
 
 	Router.GET("/square/signup", StartSquareOAuth2Flow)
 	Router.GET("/square/oauth", HandleSquareOAuthCode)
-	Router.POST("/square/processcard", ProcessCard)
+	Router.GET("/square/processcheckout", ProcessCheckout)
 
 	Router.Run(os.Getenv("S_PORT")) // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }
@@ -448,15 +447,93 @@ func HandleSquareOAuthCode(c *gin.Context) {
 	}
 
 	c.Data(200, "text/html", []byte(
-		fmt.Sprintf("<html><body onload=\"window.location.replace('%s/restaurants?square=%s&error=%s')\"/></html>",
+		fmt.Sprintf("<html><body onload=\"window.location.replace('%s/restaurants/chooselocation')\"/></html>",
 			os.Getenv("S_FRONT"),
-			"success",
-			"none",
 		)))
 }
 
-// BeginPaymentFlow starts the payment process with the user by serving
-// them the Square-provided payment form, json above required
+// Get Locations from a Square Merchant ID
+func GetLocations(c *gin.Context) {
+	// Obtain and validate google token
+	token, err := c.Cookie("bb-access")
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": "sorry bro, unable to find cookie token"})
+		return
+	}
+
+	verify, err := auth.ValidateToken(token)
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": err.Error()})
+		return
+	}
+	email := verify["email"].(string)
+
+	// Make sure restaurant exists
+	r := database.DoesRestaurantExist(email)
+	if r.Owner == "nil" {
+		c.JSON(403, gin.H{"error": "sorry bro, unable to find your restaurant"})
+		return
+	}
+
+	// Find restaurant owner user (square payment recipient)
+	u := database.DoesUserExist(r.Owner)
+	if u.Email == "nil" {
+		c.JSON(403, gin.H{"error": "sorry bro, unable to find your user"})
+		return
+	}
+
+	// Refresh their access token
+	auth.RefreshAccessToken(&u.Square)
+
+	locations, err := auth.GetLocations(u.Square.AccessToken)
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, locations)
+}
+
+// Get Locations from a Square Merchant ID
+func SetLocation(c *gin.Context) {
+	// Obtain and validate google token
+	token, err := c.Cookie("bb-access")
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": "sorry bro, unable to find cookie token"})
+		return
+	}
+
+	verify, err := auth.ValidateToken(token)
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": err.Error()})
+		return
+	}
+	email := verify["email"].(string)
+
+	// Make sure restaurant exists
+	r := database.DoesRestaurantExist(email)
+	if r.Owner == "nil" {
+		c.JSON(403, gin.H{"error": "sorry bro, unable to find your restaurant"})
+		return
+	}
+
+	r.LocationID = c.Query("id")
+	err = database.UpdateRestaurant(email, r)
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{})
+}
+
+// BeginPaymentFlow starts the payment process with the user by serving them the Square checkout page
 func BeginPaymentFlow(c *gin.Context) {
 	// Obtain and validate google token
 	token, err := c.Cookie("bb-access")
@@ -481,142 +558,66 @@ func BeginPaymentFlow(c *gin.Context) {
 		return
 	}
 
-	amount, err := strconv.Atoi(c.Query("amount"))
-	if err != nil {
-		c.JSON(403, gin.H{"error": "sorry bro, invalid amount"})
-	}
-
-	c.HTML(http.StatusOK, "form.tmpl", gin.H{
-		"app_id":      os.Getenv("SQ_APPID"),
-		"amount":      float64(amount) / 100.0,
-		"restaurant":  c.Query("restId"),
-		"user":        email,
-		"location_id": "",
-	})
-}
-
-type ProcessCardData struct {
-	Nonce      string `bson:"nonce" json:"nonce"`
-	Amount     string `bson:"amount" json:"amount"`
-	Restaurant string `bson:"restaurant" json:"restaurant"`
-	User       string `bson:"user" json:"user"`
-}
-
-// ProcessCard is called by the Payment Form with the above data to complete a payment
-func ProcessCard(c *gin.Context) {
-	// Unmarshal data
-	var data ProcessCardData
-	err := c.ShouldBindJSON(&data)
-	if err != nil {
-		processCardError(c, "sorry bro, invalid params")
+	// Find restaurant owner user (square payment recipient)
+	ro := database.DoesUserExist(r.Owner)
+	if ro.Email == "nil" {
+		c.JSON(403, gin.H{"error": "sorry bro, unable to find restaurant auth"})
 		return
 	}
 
-	// Parse amount from string
-	amount, err := strconv.ParseFloat(data.Amount, 64)
-	if err != nil {
-		c.JSON(403, gin.H{"error": "sorry bro, invalid amount"})
+	// Find restaurant owner user (square payment recipient)
+	u := database.DoesUserExist(email)
+	if u.Email == "nil" {
+		c.JSON(403, gin.H{"error": "sorry bro, unable to find your user"})
+		return
 	}
-	amountCents := int(amount * 100.0)
+
+	amount, err := strconv.Atoi(c.Query("amount"))
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": "sorry bro, invalid amount"})
+		return
+	}
+
+	checkout, err := auth.CreateCheckout(amount, r.LocationID, r.Name, &ro.Square)
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": "sorry bro, could not create a checkout"})
+		return
+	}
+
+	checkout.RestID = r.UUID
+	checkout.UserEmail = u.Email
+	checkout.Amount = amount
+
+	c.Redirect(303, checkout.URL)
+}
+
+// ProcessCheckout is called by the Checkout page with the checkout ID
+func ProcessCheckout(c *gin.Context) {
+	checkoutID := c.Query("checkoutId")
+	checkout := *auth.OpenCheckouts[checkoutID]
 
 	// Find restaurant
-	r := database.DoesRestaurantExistUUID(data.Restaurant)
+	r := database.DoesRestaurantExistUUID(checkout.RestID)
 	if r.Owner == "nil" {
 		processCardError(c, "sorry bro, unable to find that restaurant")
 		return
 	}
 
-	// Find restaurant owner user (square payment recipient)
-	u := database.DoesUserExist(r.Owner)
-	if u.Email == "nil" {
-		processCardError(c, "sorry bro, unable to find your user")
-		return
-	}
-
-	// Refresh their access token
-	auth.RefreshAccessToken(&u.Square)
-
-	requestData, err := json.Marshal(map[string]interface{}{
-		"idempotency_key": auth.GenerateUUID(),
-		"autocomplete":    true,
-		"amount_money": map[string]interface{}{
-			"amount":   amountCents,
-			"currency": "USD",
-		},
-		"source_id": data.Nonce,
-	})
-
-	request, err := http.NewRequest("POST", "https://connect.squareup.com/v2/payments", bytes.NewBuffer(requestData))
-	request.Header.Set("Content-Type", "application/json")
-
-	// Restaurant square token is sent in Auth header
-	authHeader := fmt.Sprintf("Bearer %s", u.Square.AccessToken)
-	log.Info(authHeader)
-	request.Header.Set("Authorization", authHeader)
-
-	if err != nil {
-		processCardError(c, err.Error())
-		return
-	}
-
-	timeout := time.Duration(5 * time.Second)
-	client := http.Client{
-		Timeout: timeout,
-	}
-
-	resp, err := client.Do(request)
-	if err != nil {
-		processCardError(c, err.Error())
-		return
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		processCardError(c, err.Error())
-		return
-	}
-
-	var rjson map[string]interface{}
-	err = json.Unmarshal(body, &rjson)
-	if err != nil {
-		processCardError(c, err.Error())
-		return
-	}
-
-	// Verify that payment was successful
-	var timestamp string
-	var paymentID string
-	log.Info(rjson)
-	if details, ok := rjson["payment"]; ok {
-		if ers, ok2 := rjson["errors"].([]interface{}); ok2 {
-			if len(ers) > 0 {
-				if e, ok3 := ers[0].(map[string]interface{}); ok3 {
-					processCardError(c, fmt.Sprintf("sorry bro, payment failed: %s", e["code"].(string)))
-					return
-				}
-			}
-		}
-		timestamp = details.(map[string]interface{})["created_at"].(string)
-		paymentID = details.(map[string]interface{})["id"].(string)
-	} else {
-		processCardError(c, "sorry bro, payment failed")
-		return
-	}
-
 	// Add new card in database
 	trans := database.Transaction{
-		Timestamp: timestamp,
-		Amount:    amountCents,
-		PaymentID: paymentID,
+		Timestamp: checkout.Timestamp,
+		Amount:    checkout.Amount,
+		ID:        checkout.ID,
 	}
-	_, err = database.CreateCard(data.User, data.Restaurant, trans)
+	_, err := database.CreateCard(checkout.UserEmail, checkout.RestID, trans)
 	if err != nil {
 		processCardError(c, err.Error())
 		return
 	}
 
-	c.Data(200, "text/html", []byte(fmt.Sprintf("%s/users/cards", os.Getenv("S_FRONT"))))
+	c.Redirect(303, fmt.Sprintf("%s/users/cards", os.Getenv("S_FRONT")))
 }
 
 // Helper to return ProcessCard errors
@@ -678,7 +679,7 @@ func GetRestaurantDetails(c *gin.Context) {
 		c.JSON(403, gin.H{"error": "sorry bro, unable to find that restaurant"})
 		return
 	}
-	
+
 	c.JSON(200, gin.H{"name": dbRest.Name})
 }
 
