@@ -119,10 +119,10 @@ func CreateCheckout(amount int, locationID string, restName string, s *SquareAut
 		bytes.NewBuffer(requestData))
 	request.Header.Set("Content-Type", "application/json")
 
-	// err = RefreshAccessToken(s)
-	// if err != nil {                            ONLY FOR TESTING
-	// 	return &Checkout{}, err
-	// }
+	err = RefreshAccessToken(s)
+	if err != nil {
+		return &Checkout{}, err
+	}
 
 	authHeader := fmt.Sprintf("Bearer %s", s.AccessToken)
 	request.Header.Set("Authorization", authHeader)
@@ -211,7 +211,6 @@ func GetLocations(token string) ([]Location, error) {
 				addState = add["administrative_district_level_1"].(string)
 				addCity = add["locality"].(string)
 				addZip = add["postal_code"].(string)
-				log.Info("burh")
 			}
 			var description string
 			if desc, ok := v["description"]; ok {
