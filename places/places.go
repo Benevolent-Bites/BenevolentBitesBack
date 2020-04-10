@@ -146,8 +146,6 @@ func GetPlaceID(restName string, address string) (string, error) {
 // GetPlaceDetails uses the Google Places API to find details
 // about a particular establishment
 //
-// DEPRECATED
-/*
 func GetPlaceDetails(placeID string) (maps.PlaceDetailsResult, error) {
 	params := map[string]string{
 		"key":      GKey,
@@ -177,7 +175,7 @@ func GetPlaceDetails(placeID string) (maps.PlaceDetailsResult, error) {
 	}
 
 	return resMain, nil
-}*/
+}
 
 // SendGAPIRequest uses api.py to send a GET to any url, with the given params
 // This is because, for some mysterious reason, it doesn't work in Go

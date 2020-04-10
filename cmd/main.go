@@ -9,6 +9,7 @@ import (
 	"github.com/rishabh-bector/BenevolentBitesBack/auth"
 	"github.com/rishabh-bector/BenevolentBitesBack/database"
 	"github.com/rishabh-bector/BenevolentBitesBack/places"
+	"github.com/rishabh-bector/BenevolentBitesBack/twilio"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -41,6 +42,8 @@ import (
 // /rest/redeemcard - allows restaurant to subtract credit from their issued cards
 // /rest/setpassword - allows restaurant owner to set a password for staff to redeem customer cards
 // /rest/getphoto - returns photo of restaurant from Google Places API
+// /rest/verifycall - calls the restaurants number from Google to verify them
+// /rest/verifycode - verifies the call code to that which the user entered
 //
 // Square:
 //
@@ -84,6 +87,7 @@ func main() {
 	auth.Initialize()
 	database.Initialize()
 	places.Initialize()
+	twilio.Initialize()
 
 	Router = gin.Default()
 
@@ -110,6 +114,8 @@ func main() {
 	Router.GET("/rest/getinfo", GetRestaurantInfo)
 	Router.GET("/rest/getdetails", GetRestaurantDetails)
 	Router.GET("/rest/getphoto", GetRestaurantPhoto)
+	Router.GET("/rest/verifycall", MakeVerifyCall)
+	Router.POST("/rest/verifycode", VerifyCode)
 	Router.POST("/rest/setinfo", SetRestaurantInfo)
 	Router.POST("/rest/setpassword", SetRestaurantPassword)
 	Router.POST("/rest/redeemcard", RedeemCard)
@@ -782,6 +788,90 @@ func RedeemCard(c *gin.Context) {
 		c.JSON(403, gin.H{"error": err.Error()})
 		return
 	}
+
+	c.JSON(200, gin.H{})
+}
+
+func MakeVerifyCall(c *gin.Context) {
+	// Obtain and validate google token
+	token, err := c.Cookie("bb-access")
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": "sorry bro, unable to find cookie token"})
+		return
+	}
+
+	verify, err := auth.ValidateToken(token)
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": err.Error()})
+		return
+	}
+	email := verify["email"].(string)
+
+	// Look up restaurant in DB
+	restDb := database.DoesRestaurantExist(email)
+	if restDb.Owner == "nil" {
+		c.JSON(403, gin.H{"error": "sorry bro, unable to find that restaurant"})
+		return
+	}
+
+	// Get place details
+	details, err := places.GetPlaceDetails(restDb.PlaceID)
+	if err != nil {
+		c.JSON(403, gin.H{"error": err.Error()})
+		return
+	}
+
+	recipient := details.InternationalPhoneNumber
+	err = twilio.MakeConfirmationCall(recipient, email)
+	if err != nil {
+		c.JSON(403, gin.H{"error": err.Error()})
+		return
+	}
+}
+
+func VerifyCode(c *gin.Context) {
+	// Obtain and validate google token
+	token, err := c.Cookie("bb-access")
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": "sorry bro, unable to find cookie token"})
+		return
+	}
+
+	verify, err := auth.ValidateToken(token)
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": err.Error()})
+		return
+	}
+	email := verify["email"].(string)
+
+	var data map[string]string
+	err = c.ShouldBindJSON(&data)
+	if err != nil {
+		c.JSON(403, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Verify code
+	verified := twilio.VerifyCode(email, data["code"])
+	if !verified {
+		c.JSON(403, gin.H{"error": "sorry bro, wrong code"})
+		return
+	}
+
+	// Look up restaurant in DB
+	restDb := database.DoesRestaurantExist(email)
+	if restDb.Owner == "nil" {
+		c.JSON(403, gin.H{"error": "sorry bro, unable to find that restaurant"})
+		return
+	}
+
+	// Update verified status
+	restDb.Verified = true
+	database.UpdateRestaurant(email, restDb)
 
 	c.JSON(200, gin.H{})
 }
