@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-gonic/gin v1.6.2
+	github.com/go-resty/resty/v2 v2.2.0
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/sirupsen/logrus v1.5.0
