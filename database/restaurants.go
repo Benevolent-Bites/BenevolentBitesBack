@@ -14,22 +14,23 @@ import (
 
 type Restaurant struct {
 	// Mutable
-	Owner                  string `bson:"owner" json:"owner"`
-	ContactEmail           string `bson:"contact" json:"contact"`
-	Name                   string `bson:"name" json:"name"`
-	Address                string `bson:"address" json:"address"`
-	City                   string `bson:"city" json:"city"`
-	State                  string `bson:"state" json:"state"`
-	Zip                    string `bson:"zip" json:"zip"`
-	Website                string `bson:"website" json:"website"`
-	Yelp                   string `bson:"yelp" json:"yelp"`
-	Description            string `bson:"description" json:"description"`
-	Employees []map[string]string `bson:"employees" json:"employees"`
+	Owner        string              `bson:"owner" json:"owner"`
+	ContactEmail string              `bson:"contact" json:"contact"`
+	Name         string              `bson:"name" json:"name"`
+	Address      string              `bson:"address" json:"address"`
+	City         string              `bson:"city" json:"city"`
+	State        string              `bson:"state" json:"state"`
+	Zip          string              `bson:"zip" json:"zip"`
+	Website      string              `bson:"website" json:"website"`
+	Yelp         string              `bson:"yelp" json:"yelp"`
+	Description  string              `bson:"description" json:"description"`
+	Employees    []map[string]string `bson:"employees" json:"employees"`
 
 	// Constant
-	UUID     string `bson:"uuid" json:"uuid"`
-	PlaceID  string `bson:"placeId" json:"placeId"`
-	PassHash string `bson:"passHash" json:"passHash"`
+	UUID       string `bson:"uuid" json:"uuid"`
+	PlaceID    string `bson:"placeId" json:"placeId"`
+	PassHash   string `bson:"passHash" json:"passHash"`
+	LocationID string `bson:"locationId" json:"locationId"`
 }
 
 // UpdateRestaurant adds a new restaurant into the DB if it doesn't yet exist

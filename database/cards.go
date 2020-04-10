@@ -22,13 +22,13 @@ type Card struct {
 type Transaction struct {
 	Timestamp string `bson:"timestamp" json:"timestamp"`
 	Amount    int    `bson:"amount" json:"amount"`
-	PaymentID string `bson:"paymentId" json:"paymentId"`
+	ID        string `bson:"id" json:"id"`
 }
 
 var NilCard = Card{UUID: "nil"}
 
 // CreateCard makes a new card with empty balance
-func CreateCard(user, restaurant string, trans Transaction) (Card, error) {
+func CreateCard(user string, restaurant string, trans Transaction) (Card, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -57,7 +57,7 @@ func CreateCard(user, restaurant string, trans Transaction) (Card, error) {
 }
 
 // AddCredit adds credit to an already existing card
-func AddCredit(id, payment_id string, amount int) error {
+func AddCredit(id, transaction_id string, amount int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -73,7 +73,7 @@ func AddCredit(id, payment_id string, amount int) error {
 
 	// Add transaction
 	trans := Transaction{
-		PaymentID: payment_id,
+		ID:        transaction_id,
 		Timestamp: time.Now().Format(time.RFC3339),
 		Amount:    amount,
 	}
@@ -105,7 +105,7 @@ func SubtractCredit(id string, amount int) error {
 
 	// Add transaction
 	trans := Transaction{
-		PaymentID: "",
+		ID:        "",
 		Timestamp: time.Now().Format(time.RFC3339),
 		Amount:    -1 * amount,
 	}

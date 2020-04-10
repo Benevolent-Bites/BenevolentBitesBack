@@ -41,7 +41,7 @@ type APIDetails struct {
 	Rating            float32 `json:"rating"`
 	PriceLevel        int     `json:"priceLevel"`
 	CustomDescription string  `json:"description"`
-	UUID              string  `json:"description"`
+	RestID            string  `json:"restID"`
 }
 
 // SearchCoords searches for restaurants around the Coords of the origin, based
@@ -91,11 +91,14 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 		}
 
 		if r.Owner == "nil" {
-			d.CustomDescription = r.Description
-			d.UUID = r.UUID
+			d.RestID = pid
 
 			sr.Off = append(sr.Off, d)
 		} else {
+			d.CustomDescription = r.Description
+			d.RestID = r.UUID
+			d.Name = r.Name
+
 			sr.On = append(sr.On, d)
 		}
 	}

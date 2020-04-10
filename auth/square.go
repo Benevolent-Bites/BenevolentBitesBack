@@ -20,8 +20,10 @@ type SquareAuth struct {
 }
 
 func GetRedirectToSquare(email string) string {
-	return fmt.Sprintf("https://squareup.com/oauth2/authorize?client_id=%s&state=%s&scope=MERCHANT_PROFILE_READ PAYMENTS_READ SETTLEMENTS_READ BANK_ACCOUNTS_READ PAYMENTS_WRITE", os.Getenv("SQ_APPID"), email)
+	return fmt.Sprintf("%s/oauth2/authorize?client_id=%s&state=%s&scope=MERCHANT_PROFILE_READ PAYMENTS_WRITE ORDERS_WRITE", os.Getenv("SQ_URL"), os.Getenv("SQ_APPID"), email)
 }
+
+var OpenCheckouts = map[string]*Checkout{}
 
 func GetTokenFromSquareAuthCode(code string) (SquareAuth, error) {
 	requestData, err := json.Marshal(map[string]string{
@@ -31,7 +33,7 @@ func GetTokenFromSquareAuthCode(code string) (SquareAuth, error) {
 		"code":          code,
 	})
 
-	request, err := http.NewRequest("POST", "https://connect.squareup.com/oauth2/token", bytes.NewBuffer(requestData))
+	request, err := http.NewRequest("POST", fmt.Sprintf("%s/oauth2/token", os.Getenv("SQ_URL")), bytes.NewBuffer(requestData))
 	request.Header.Set("Content-Type", "application/json")
 	if err != nil {
 		log.Error(err)
@@ -75,14 +77,97 @@ func GetTokenFromSquareAuthCode(code string) (SquareAuth, error) {
 }
 
 type Location struct {
-	id          string `json:"id"`
-	address     string `json:"address"`
-	name        string `json:"name"`
-	description string `json:"description"`
+	Id          string `json:"id"`
+	Address     string `json:"address"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type Checkout struct {
+	ID        string `json:"id"`
+	URL       string `json:"checkout_page_url"`
+	Timestamp string `json:"created_at"`
+	Amount    int
+	RestID    string
+	UserEmail string
+}
+
+func CreateCheckout(amount int, locationID string, restName string, s *SquareAuth) (*Checkout, error) {
+
+	requestData, err := json.Marshal(map[string]interface{}{
+		"idempotency_key": GenerateUUID(),
+		"redirect_url":    fmt.Sprintf(os.Getenv("SQ_REDIRECT")),
+		"order": map[string]interface{}{
+			"idempotency_key": GenerateUUID(),
+			"order": map[string]interface{}{
+				"location_id": locationID,
+				"line_items": []map[string]interface{}{
+					{
+						"quantity": "1",
+						"name":     fmt.Sprintf("%s Gift Card", restName),
+						"base_price_money": map[string]interface{}{
+							"amount":   amount,
+							"currency": "USD",
+						},
+					},
+				},
+			},
+		},
+	})
+
+	request, err := http.NewRequest("POST", fmt.Sprintf("%s/v2/locations/%s/checkouts", os.Getenv("SQ_URL"), locationID),
+		bytes.NewBuffer(requestData))
+	request.Header.Set("Content-Type", "application/json")
+
+	// err = RefreshAccessToken(s)
+	// if err != nil {                            ONLY FOR TESTING
+	// 	return &Checkout{}, err
+	// }
+
+	authHeader := fmt.Sprintf("Bearer %s", s.AccessToken)
+	request.Header.Set("Authorization", authHeader)
+
+	if err != nil {
+		return &Checkout{}, err
+	}
+
+	timeout := time.Duration(5 * time.Second)
+	client := http.Client{
+		Timeout: timeout,
+	}
+
+	resp, err := client.Do(request)
+	if err != nil {
+		return &Checkout{}, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return &Checkout{}, err
+	}
+
+	var response map[string]interface{}
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return &Checkout{}, err
+	}
+
+	if checkout, ok := response["checkout"]; ok {
+		jCheckout, _ := json.Marshal(checkout)
+		var cCheckout Checkout
+		if err := json.Unmarshal(jCheckout, &cCheckout); err == nil {
+			OpenCheckouts[cCheckout.ID] = &cCheckout
+			return &cCheckout, nil
+		}
+		return &Checkout{}, fmt.Errorf("couldn't cast %s as Checkout", checkout)
+	}
+
+	return &Checkout{}, fmt.Errorf("%s", response["errors"].([]interface{})[0])
 }
 
 func GetLocations(token string) ([]Location, error) {
-	request, err := http.NewRequest("GET", "https://connect.squareup.com/v2/locations")
+	request, err := http.NewRequest("GET", fmt.Sprintf("%s/v2/locations", os.Getenv("SQ_URL")), nil)
 	request.Header.Set("Content-Type", "application/json")
 
 	authHeader := fmt.Sprintf("Bearer %s", token)
@@ -118,22 +203,25 @@ func GetLocations(token string) ([]Location, error) {
 	}
 
 	if locations, ok := rjson["locations"]; ok {
-		output := make([]Location, len(locations))
+		var output []Location
 		for _, v := range locations {
-			add := v["address"].(map[string]string)
-			addLine1 := add["address_line_1"]
-			addState := add["administrative_district_level_1"]
-			addCity := add["locality"]
-			addZip := add["postal_code"]
+			var addLine1, addState, addCity, addZip string
+			if add, ok := v["address"].(map[string]interface{}); ok {
+				addLine1 = add["address_line_1"].(string)
+				addState = add["administrative_district_level_1"].(string)
+				addCity = add["locality"].(string)
+				addZip = add["postal_code"].(string)
+				log.Info("burh")
+			}
 			var description string
 			if desc, ok := v["description"]; ok {
-				description = desc
+				description = desc.(string)
 			}
 			output = append(output, Location{
-				id:          v["id"].(string),
-				address:     fmt.Sprintf("%s %s, %s %s", addLine1, addCity, addState, addZip),
-				name:        v["name"].(string),
-				description: description,
+				Id:          v["id"].(string),
+				Address:     fmt.Sprintf("%s %s, %s %s", addLine1, addCity, addState, addZip),
+				Name:        v["name"].(string),
+				Description: description,
 			})
 		}
 		return output, nil
@@ -143,6 +231,9 @@ func GetLocations(token string) ([]Location, error) {
 }
 
 func RefreshAccessToken(s *SquareAuth) error {
+	if s.RefreshToken == "" {
+		return errors.New("No refresh token")
+	}
 	requestData, err := json.Marshal(map[string]string{
 		"client_id":     os.Getenv("SQ_APPID"),
 		"client_secret": os.Getenv("SQ_SECRET"),
@@ -150,7 +241,7 @@ func RefreshAccessToken(s *SquareAuth) error {
 		"refresh_token": s.RefreshToken,
 	})
 
-	request, err := http.NewRequest("POST", "https://connect.squareup.com/oauth2/token", bytes.NewBuffer(requestData))
+	request, err := http.NewRequest("POST", fmt.Sprintf("%s/oauth2/token", os.Getenv("SQ_URL")), bytes.NewBuffer(requestData))
 	request.Header.Set("Content-Type", "application/json")
 	if err != nil {
 		log.Error(err)
