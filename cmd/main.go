@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/rishabh-bector/BenevolentBitesBack/auth"
 	"github.com/rishabh-bector/BenevolentBitesBack/database"
@@ -828,6 +829,8 @@ func MakeVerifyCall(c *gin.Context) {
 	}
 
 	recipient := details.InternationalPhoneNumber
+	recipient = strings.Replace(recipient, " ", "", -1)
+	recipient = strings.Replace(recipient, "-", "", -1)
 	err = twilio.MakeConfirmationCall(recipient, email)
 	if err != nil {
 		c.JSON(403, gin.H{"error": err.Error()})
