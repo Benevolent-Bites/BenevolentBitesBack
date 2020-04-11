@@ -21,6 +21,7 @@ func Initialize() {
 	TwilioNumber = os.Getenv("TW_NUM")
 	RestyClient = resty.New()
 	RestyClient.SetBasicAuth("AC8755a2368f6e69bd997a1c0d2e5f40e3", os.Getenv("TW_TKN"))
+	Codes = make(map[string]string)
 }
 
 // MakeConfirmationCall calls a restaurant's phone number to verify them
