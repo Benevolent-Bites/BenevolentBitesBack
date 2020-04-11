@@ -46,6 +46,7 @@ import (
 //
 // /square/signup - redirect user to square login
 // /square/oauth - redirected to by Square, exchanges auth code
+// /square/processcheckout - creates card after a square checkout callback
 //
 // Users:
 //

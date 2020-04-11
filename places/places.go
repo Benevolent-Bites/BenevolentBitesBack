@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/rishabh-bector/BenevolentBitesBack/database"
-	log "github.com/sirupsen/logrus"
 
 	"googlemaps.github.io/maps"
 )
@@ -70,8 +69,6 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 		On:  []APIDetails{},
 		Off: []APIDetails{},
 	}
-
-	log.Info(string(body))
 
 	for p := range places {
 		pid := places[p].PlaceID

@@ -114,9 +114,15 @@ func CreateCheckout(amount int, locationID string, restName string, s *SquareAut
 			},
 		},
 	})
+	if err != nil {
+		return &Checkout{}, err
+	}
 
 	request, err := http.NewRequest("POST", fmt.Sprintf("%s/v2/locations/%s/checkouts", os.Getenv("SQ_URL"), locationID),
 		bytes.NewBuffer(requestData))
+	if err != nil {
+		return &Checkout{}, err
+	}
 	request.Header.Set("Content-Type", "application/json")
 
 	err = RefreshAccessToken(s)
@@ -127,9 +133,7 @@ func CreateCheckout(amount int, locationID string, restName string, s *SquareAut
 	authHeader := fmt.Sprintf("Bearer %s", s.AccessToken)
 	request.Header.Set("Authorization", authHeader)
 
-	if err != nil {
-		return &Checkout{}, err
-	}
+	log.Info(fmt.Sprintf("%s %s", authHeader, locationID))
 
 	timeout := time.Duration(5 * time.Second)
 	client := http.Client{
