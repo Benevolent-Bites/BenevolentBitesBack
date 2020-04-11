@@ -282,6 +282,7 @@ func GetRestaurantInfo(c *gin.Context) {
 		"yelp":        r.Yelp,
 		"description": r.Description,
 		"employees":   r.Employees,
+		"published":   r.Published,
 	}
 
 	if u.Square.MerchantID != "" {
