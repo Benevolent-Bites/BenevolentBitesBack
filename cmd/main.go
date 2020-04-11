@@ -833,6 +833,8 @@ func MakeVerifyCall(c *gin.Context) {
 		c.JSON(403, gin.H{"error": err.Error()})
 		return
 	}
+
+	c.JSON(200, gin.H{"phone": recipient})
 }
 
 func VerifyCode(c *gin.Context) {
