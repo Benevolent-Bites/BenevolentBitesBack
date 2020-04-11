@@ -96,7 +96,9 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 			d.RestID = r.UUID
 			d.Name = r.Name
 
-			sr.On = append(sr.On, d)
+			if r.Published {
+				sr.On = append(sr.On, d)
+			}
 		}
 	}
 
