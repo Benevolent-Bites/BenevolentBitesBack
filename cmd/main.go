@@ -44,6 +44,7 @@ import (
 // /rest/getphoto - returns photo of restaurant from Google Places API
 // /rest/verifycall - calls the restaurants number from Google to verify them
 // /rest/verifycode - verifies the call code to that which the user entered
+// /rest/publish - makes sure that the new restaurant has: information, square, employees, and phone verification
 //
 // Square:
 //
@@ -122,6 +123,7 @@ func main() {
 	Router.POST("/rest/redeemcard", RedeemCard)
 	Router.GET("/rest/getlocations", GetLocations)
 	Router.GET("/rest/setlocation", SetLocation)
+	Router.GET("/rest/publish", PublishRestaurant)
 
 	Router.GET("/user/signup", StartUSEROAuth2Flow)
 	Router.GET("/user/getinfo", GetUserInfo)
@@ -872,6 +874,68 @@ func VerifyCode(c *gin.Context) {
 
 	// Update verified status
 	restDb.Verified = true
+	database.UpdateRestaurant(email, restDb)
+
+	c.JSON(200, gin.H{})
+}
+
+func PublishRestaurant(c *gin.Context) {
+	// Obtain and validate google token
+	token, err := c.Cookie("bb-access")
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": "Unable to find cookie token. Please login again."})
+		return
+	}
+
+	verify, err := auth.ValidateToken(token)
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": err.Error()})
+		return
+	}
+	email := verify["email"].(string)
+
+	// Look up restaurant in DB
+	restDb := database.DoesRestaurantExist(email)
+	if restDb.Owner == "nil" {
+		c.JSON(403, gin.H{"error": "Unable to find that restaurant"})
+		return
+	}
+
+	// Look up user
+	userDb := database.DoesUserExist(email)
+	if userDb.Name == "nil" {
+		c.JSON(403, gin.H{"error": "Unable to find that restaurant."})
+		return
+	}
+
+	// Check restaurant details
+	if restDb.Name == "" || restDb.Description == "" {
+		c.JSON(403, gin.H{"error": "Unable to find restaurant name or description."})
+		return
+	}
+
+	// Check square
+	if userDb.Square.AccessToken == "" {
+		c.JSON(403, gin.H{"error": "Unable to find restaurant square integration."})
+		return
+	}
+
+	// Check employees
+	if len(restDb.Employees) > 0 {
+		c.JSON(403, gin.H{"error": "Unable to find restaurant employees."})
+		return
+	}
+
+	// Check phone verification
+	if restDb.Verified == false {
+		c.JSON(403, gin.H{"error": "Please authenticate your restaurant by phone."})
+		return
+	}
+
+	// Publish restaurant
+	restDb.Published = true
 	database.UpdateRestaurant(email, restDb)
 
 	c.JSON(200, gin.H{})

@@ -32,6 +32,7 @@ type Restaurant struct {
 	PassHash   string `bson:"passHash" json:"passHash"`
 	LocationID string `bson:"locationId" json:"locationId"`
 	Verified   bool   `bson:"verified" json:"verified"`
+	Published  bool   `bson:"published" json:"published"`
 }
 
 // UpdateRestaurant adds a new restaurant into the DB if it doesn't yet exist
