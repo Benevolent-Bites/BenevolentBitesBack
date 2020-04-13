@@ -292,6 +292,12 @@ func GetRestaurantInfo(c *gin.Context) {
 		resp["hasSquare"] = false
 	}
 
+	if r.PassHash != "" {
+		resp["hasPassword"] = true
+	} else {
+		resp["hasPassword"] = false
+	}
+
 	c.JSON(200, resp)
 }
 
@@ -682,16 +688,39 @@ func SearchCoords(c *gin.Context) {
 	c.JSON(200, s)
 }
 
+type RestDetails struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Address     string `json:"address"`
+	Website     string `json:"website"`
+}
+
 func GetRestaurantDetails(c *gin.Context) {
 	rest := c.Query("restId")
 
+	pid := rest
 	dbRest := database.DoesRestaurantExistUUID(rest)
-	if dbRest.Owner == "nil" {
-		c.JSON(403, gin.H{"error": "sorry bro, unable to find that restaurant"})
+	if dbRest.Owner != "nil" {
+		pid = dbRest.PlaceID
+	}
+
+	var rd RestDetails
+	pd, err := places.GetPlaceDetails(pid)
+	if err != nil {
+		c.JSON(403, gin.H{"error": "Sorry bro, cannot find that place"})
 		return
 	}
 
-	c.JSON(200, gin.H{"name": dbRest.Name})
+	rd.Name = pd.Name
+	rd.Address = pd.Vicinity
+	rd.Website = pd.Website
+
+	if dbRest.Owner != "nil" {
+		rd.Name = dbRest.Name
+		rd.Description = dbRest.Description
+	}
+
+	c.JSON(200, rd)
 }
 
 func GetRestaurantPhoto(c *gin.Context) {
@@ -829,6 +858,11 @@ func MakeVerifyCall(c *gin.Context) {
 	}
 
 	recipient := details.InternationalPhoneNumber
+	if recipient == "" {
+		c.JSON(403, gin.H{"error": "sorry bro, no phone number on google maps"})
+		return
+	}
+
 	recipient = strings.Replace(recipient, " ", "", -1)
 	recipient = strings.Replace(recipient, "-", "", -1)
 	err = twilio.MakeConfirmationCall(recipient, email)

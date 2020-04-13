@@ -32,15 +32,15 @@ type SearchResponse struct {
 }
 
 type APIDetails struct {
-	Name              string  `json:"name"`
-	Address           string  `json:"address"`
-	Latitude          float64 `json:"latitude"`
-	Longitude         float64 `json:"longitude"`
-	Image             string  `json:"image"`
-	Rating            float32 `json:"rating"`
-	PriceLevel        int     `json:"priceLevel"`
-	CustomDescription string  `json:"description"`
-	RestID            string  `json:"restID"`
+	Name        string  `json:"name"`
+	Address     string  `json:"address"`
+	Latitude    float64 `json:"latitude"`
+	Longitude   float64 `json:"longitude"`
+	Image       string  `json:"image"`
+	Rating      float32 `json:"rating"`
+	PriceLevel  int     `json:"priceLevel"`
+	Description string  `json:"description"`
+	RestID      string  `json:"restID"`
 }
 
 // SearchCoords searches for restaurants around the Coords of the origin, based
@@ -76,7 +76,7 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 
 		d := APIDetails{
 			Name:       places[p].Name,
-			Address:    places[p].FormattedAddress,
+			Address:    places[p].Vicinity,
 			Latitude:   places[p].Geometry.Location.Lat,
 			Longitude:  places[p].Geometry.Location.Lng,
 			Rating:     places[p].Rating,
@@ -92,7 +92,7 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 
 			sr.Off = append(sr.Off, d)
 		} else {
-			d.CustomDescription = r.Description
+			d.Description = r.Description
 			d.RestID = r.UUID
 			d.Name = r.Name
 
