@@ -607,6 +607,8 @@ type RestDetails struct {
 	Description string `json:"description"`
 	Address     string `json:"address"`
 	Website     string `json:"website"`
+	Image       string `json:"image"`
+	Phone       string `json:"phone"`
 }
 
 func GetRestaurantDetails(c *gin.Context) {
@@ -626,8 +628,13 @@ func GetRestaurantDetails(c *gin.Context) {
 	}
 
 	rd.Name = pd.Name
-	rd.Address = pd.Vicinity
+	rd.Address = pd.FormattedAddress
+	rd.Phone = pd.InternationalPhoneNumber
 	rd.Website = pd.Website
+
+	if len(pd.Photos) > 0 {
+		rd.Image = pd.Photos[0].PhotoReference
+	}
 
 	if dbRest.Owner != "nil" {
 		rd.Name = dbRest.Name

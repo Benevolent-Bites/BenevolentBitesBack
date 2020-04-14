@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/rishabh-bector/BenevolentBitesBack/database"
+	log "github.com/sirupsen/logrus"
 
 	"googlemaps.github.io/maps"
 )
@@ -154,22 +155,32 @@ func GetPlaceDetails(placeID string) (maps.PlaceDetailsResult, error) {
 	var res map[string]interface{}
 	body, err := SendGAPIRequest("https://maps.googleapis.com/maps/api/place/details/json", params)
 	if err != nil {
+		log.Error(err.Error())
 		return maps.PlaceDetailsResult{}, err
 	}
 
 	err = json.Unmarshal(body, &res)
 	if err != nil {
+		log.Errorf("error unmarshaling google response, %s", err.Error())
+		file, err := os.Create("log.txt")
+		file.Write(body)
 		return maps.PlaceDetailsResult{}, err
+	}
+
+	if _, ok := res["result"]; !ok {
+		return maps.PlaceDetailsResult{}, fmt.Errorf("%s", res)
 	}
 
 	var resMain maps.PlaceDetailsResult
 	body2, err := json.Marshal(res["result"].(map[string]interface{}))
 	if err != nil {
+		log.Errorf("error marshaling, %s", err.Error())
 		return maps.PlaceDetailsResult{}, err
 	}
 
 	err = json.Unmarshal(body2, &resMain)
 	if err != nil {
+		log.Errorf("error unmarshaling google response [result]", err.Error())
 		return maps.PlaceDetailsResult{}, err
 	}
 
@@ -200,8 +211,10 @@ func SendGAPIRequest(url string, params map[string]string) ([]byte, error) {
 	for i := 0; i < len(onlydouble); i++ {
 		if onlydouble[i] == rune('"') {
 			if onlydouble[i+1] != rune(',') && onlydouble[i+1] != rune('}') && onlydouble[i+1] != rune(']') && onlydouble[i+1] != rune(':') {
-				if onlydouble[i-1] != rune(' ') && onlydouble[i-1] != rune('{') && onlydouble[i-1] != rune('[') {
-					onlydouble[i] = '\''
+				if onlydouble[i-1] != rune('{') && onlydouble[i-1] != rune('[') {
+					if i > 1 && !(onlydouble[i-1] == rune(' ') && (onlydouble[i-2] == rune(':') || onlydouble[i-2] == rune(','))) {
+						onlydouble[i] = '\''
+					}
 				}
 			}
 		}
