@@ -518,7 +518,15 @@ func BeginPaymentFlow(c *gin.Context) {
 // ProcessCheckout is called by the Checkout page with the checkout ID
 func ProcessCheckout(c *gin.Context) {
 	checkoutID := c.Query("checkoutId")
-	checkout := *auth.OpenCheckouts[checkoutID]
+
+	var checkout auth.Checkout
+	if co, ok := auth.OpenCheckouts[checkoutID]; !ok {
+		checkout = *co
+		delete(auth.OpenCheckouts, checkoutID)
+	} else {
+		processCardError(c, "sorry bro, no checkout open")
+		return
+	}
 
 	// Find restaurant
 	r := database.DoesRestaurantExistUUID(checkout.RestID)
@@ -533,6 +541,7 @@ func ProcessCheckout(c *gin.Context) {
 		Amount:    checkout.Amount,
 		ID:        checkout.ID,
 	}
+
 	_, err := database.CreateCard(checkout.UserEmail, checkout.RestID, trans)
 	if err != nil {
 		processCardError(c, err.Error())
@@ -707,7 +716,7 @@ func RedeemCard(c *gin.Context) {
 		c.JSON(403, gin.H{"error": err.Error()})
 		return
 	}
-	log.Info(uuid)
+
 	cardDb := database.DoesCardExist(uuid)
 	if cardDb.UUID == "nil" {
 		c.JSON(403, gin.H{"error": "sorry bro, unable to find that card"})
@@ -727,8 +736,15 @@ func RedeemCard(c *gin.Context) {
 		return
 	}
 
+	// Make sure transaction is not duplicated
+	signature := strings.Split(data.CardID, ".")[1]
+	if cardDb.Transactions[len(cardDb.Transactions)-1].Signature == signature {
+		c.JSON(403, gin.H{"error": "code already redeemed, please regenerate"})
+		return
+	}
+
 	// Redeem card
-	err = database.SubtractCredit(uuid, data.Amount)
+	err = database.SubtractCredit(uuid, data.Amount, signature)
 	if err != nil {
 		c.JSON(403, gin.H{"error": err.Error()})
 		return

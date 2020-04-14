@@ -25,6 +25,7 @@ type Transaction struct {
 	Timestamp string `bson:"timestamp" json:"timestamp"`
 	Amount    int    `bson:"amount" json:"amount"`
 	ID        string `bson:"id" json:"id"`
+	Signature string `bson:"signature" json:"signature"`
 }
 
 var NilCard = Card{UUID: "nil"}
@@ -87,7 +88,7 @@ func AddCredit(id, transaction_id string, amount int) error {
 }
 
 // SubtractCredit removes credit from an already existing card
-func SubtractCredit(id string, amount int) error {
+func SubtractCredit(id string, amount int, signature string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -110,6 +111,7 @@ func SubtractCredit(id string, amount int) error {
 		ID:        "",
 		Timestamp: time.Now().Format(time.RFC3339),
 		Amount:    -1 * amount,
+		Signature: signature,
 	}
 	c.Transactions = append(c.Transactions, trans)
 
