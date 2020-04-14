@@ -17,6 +17,7 @@ type SquareAuth struct {
 	MerchantID   string `bson:"merchantId" json:"merchantId"`
 	AccessToken  string `bson:"accessToken" json:"accessToken"`
 	RefreshToken string `bson:"refreshToken" json:"refreshToken"`
+	LocationID   string `bson:"locationId" json:"locationId"`
 }
 
 func GetRedirectToSquare(email string) string {
@@ -132,8 +133,6 @@ func CreateCheckout(amount int, locationID string, restName string, s *SquareAut
 
 	authHeader := fmt.Sprintf("Bearer %s", s.AccessToken)
 	request.Header.Set("Authorization", authHeader)
-
-	log.Info(fmt.Sprintf("%s %s", authHeader, locationID))
 
 	timeout := time.Duration(5 * time.Second)
 	client := http.Client{

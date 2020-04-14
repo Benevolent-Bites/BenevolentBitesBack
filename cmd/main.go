@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/rishabh-bector/BenevolentBitesBack/auth"
+	"github.com/rishabh-bector/BenevolentBitesBack/crypto"
 	"github.com/rishabh-bector/BenevolentBitesBack/database"
 	"github.com/rishabh-bector/BenevolentBitesBack/places"
 	"github.com/rishabh-bector/BenevolentBitesBack/twilio"
@@ -91,6 +92,7 @@ func main() {
 	database.Initialize()
 	places.Initialize()
 	twilio.Initialize()
+	crypto.Initialize()
 
 	Router = gin.Default()
 
@@ -127,11 +129,9 @@ func main() {
 	Router.GET("/rest/publish", PublishRestaurant)
 
 	Router.GET("/user/signup", StartUSEROAuth2Flow)
-	Router.GET("/user/getinfo", GetUserInfo)
 	Router.GET("/user/getavatar", GetUserAvatar)
 	Router.GET("/user/getcards", GetUserCards)
 	Router.GET("/user/buy", BeginPaymentFlow)
-	Router.POST("/user/setinfo", SetUserInfo)
 
 	Router.GET("/square/signup", StartSquareOAuth2Flow)
 	Router.GET("/square/oauth", HandleSquareOAuthCode)
@@ -172,7 +172,7 @@ func HandleOAuthCode(c *gin.Context) {
 	redirect := c.Query("state")
 
 	u := database.ValidateUser(t)
-	if u.Email == "nil" {
+	if u == "nil" {
 		log.Error("BB: Unable to validate token")
 		c.Data(200, "text/html", []byte(
 			fmt.Sprintf("<html><body onload=\"window.location.replace('%s/restaurants&login=%s&error=%s')\"/></html>",
@@ -267,11 +267,6 @@ func GetRestaurantInfo(c *gin.Context) {
 		return
 	}
 
-	u := database.DoesUserExist(email)
-	if u.Email == "nil" {
-		c.JSON(403, gin.H{"error": "sorry bro, unable to locate owner's account"})
-	}
-
 	resp := map[string]interface{}{
 		"owner":       r.Owner,
 		"contact":     r.ContactEmail,
@@ -286,7 +281,7 @@ func GetRestaurantInfo(c *gin.Context) {
 		"published":   r.Published,
 	}
 
-	if u.Square.MerchantID != "" {
+	if r.Square.MerchantID != "" {
 		resp["hasSquare"] = true
 	} else {
 		resp["hasSquare"] = false
@@ -319,75 +314,6 @@ func VerifyToken(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"email": verify["email"].(string)})
-}
-
-// SetUserInfo allows the frontend to update user info
-func SetUserInfo(c *gin.Context) {
-	// Obtain and validate token
-	token, err := c.Cookie("bb-access")
-	if err != nil {
-		log.Error(err)
-		c.JSON(403, gin.H{"error": "sorry bro, unable to find cookie token"})
-		return
-	}
-
-	verify, err := auth.ValidateToken(token)
-	if err != nil {
-		log.Error(err)
-		c.JSON(403, gin.H{"error": err.Error()})
-		return
-	}
-	email := verify["email"].(string)
-
-	// Unmarshal frontend data
-	var u database.User
-	if err := c.ShouldBindJSON(&u); err != nil {
-		log.Error(err)
-		c.JSON(403, gin.H{"error": "sorry bro, invalid json"})
-		return
-	}
-
-	u.Email = email
-
-	err = database.UpdateUser(email, u)
-	if err != nil {
-		log.Info(err)
-		c.JSON(403, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(200, gin.H{})
-}
-
-// GetUserInfo retrieves user info for the frontend
-func GetUserInfo(c *gin.Context) {
-	// Obtain and validate token
-	token, err := c.Cookie("bb-access")
-	if err != nil {
-		log.Error(err)
-		c.JSON(403, gin.H{"error": "sorry bro, unable to find cookie token"})
-		return
-	}
-
-	verify, err := auth.ValidateToken(token)
-	if err != nil {
-		log.Error(err)
-		c.JSON(403, gin.H{"error": err.Error()})
-		return
-	}
-	email := verify["email"].(string)
-
-	u := database.DoesUserExist(email)
-	if u.Email == "nil" {
-		c.JSON(403, gin.H{"error": "sorry bro, that user doesn't exist"})
-		return
-	}
-
-	// Remove sensitive info
-	u.Square = auth.SquareAuth{}
-	u.Token = ""
-
-	c.JSON(200, u)
 }
 
 // GetUserAvatar retrieves the user's google avatar image
@@ -494,17 +420,10 @@ func GetLocations(c *gin.Context) {
 		return
 	}
 
-	// Find restaurant owner user (square payment recipient)
-	u := database.DoesUserExist(r.Owner)
-	if u.Email == "nil" {
-		c.JSON(403, gin.H{"error": "sorry bro, unable to find your user"})
-		return
-	}
-
 	// Refresh their access token
-	auth.RefreshAccessToken(&u.Square)
+	auth.RefreshAccessToken(&r.Square)
 
-	locations, err := auth.GetLocations(u.Square.AccessToken)
+	locations, err := auth.GetLocations(r.Square.AccessToken)
 	if err != nil {
 		log.Error(err)
 		c.JSON(403, gin.H{"error": err.Error()})
@@ -539,7 +458,7 @@ func SetLocation(c *gin.Context) {
 		return
 	}
 
-	r.LocationID = c.Query("id")
+	r.Square.LocationID = c.Query("id")
 	err = database.UpdateRestaurant(email, r)
 	if err != nil {
 		log.Error(err)
@@ -575,20 +494,6 @@ func BeginPaymentFlow(c *gin.Context) {
 		return
 	}
 
-	// Find restaurant owner user (square payment recipient)
-	ro := database.DoesUserExist(r.Owner)
-	if ro.Email == "nil" {
-		c.JSON(403, gin.H{"error": "sorry bro, unable to find restaurant auth"})
-		return
-	}
-
-	// Find restaurant owner user (square payment recipient)
-	u := database.DoesUserExist(email)
-	if u.Email == "nil" {
-		c.JSON(403, gin.H{"error": "sorry bro, unable to find your user"})
-		return
-	}
-
 	amount, err := strconv.Atoi(c.Query("amount"))
 	if err != nil {
 		log.Error(err)
@@ -596,7 +501,7 @@ func BeginPaymentFlow(c *gin.Context) {
 		return
 	}
 
-	checkout, err := auth.CreateCheckout(amount, r.LocationID, r.Name, &ro.Square)
+	checkout, err := auth.CreateCheckout(amount, r.Square.LocationID, r.Name, &r.Square)
 	if err != nil {
 		log.Error(err)
 		c.JSON(403, gin.H{"error": "sorry bro, could not create a checkout"})
@@ -604,7 +509,7 @@ func BeginPaymentFlow(c *gin.Context) {
 	}
 
 	checkout.RestID = r.UUID
-	checkout.UserEmail = u.Email
+	checkout.UserEmail = email
 	checkout.Amount = amount
 
 	c.Redirect(303, checkout.URL)
@@ -764,7 +669,7 @@ func SetRestaurantPassword(c *gin.Context) {
 		return
 	}
 
-	hash, err := HashPassword(data["password"].(string))
+	hash, err := crypto.HashPassword(data["password"].(string))
 	if err != nil {
 		c.JSON(403, gin.H{"error": "sorry bro, error code: 98234"})
 		return
@@ -797,7 +702,13 @@ func RedeemCard(c *gin.Context) {
 		return
 	}
 
-	cardDb := database.DoesCardExist(data.CardID)
+	uuid, err := crypto.ValidateJWT(data.CardID)
+	if err != nil {
+		c.JSON(403, gin.H{"error": err.Error()})
+		return
+	}
+	log.Info(uuid)
+	cardDb := database.DoesCardExist(uuid)
 	if cardDb.UUID == "nil" {
 		c.JSON(403, gin.H{"error": "sorry bro, unable to find that card"})
 		return
@@ -810,14 +721,14 @@ func RedeemCard(c *gin.Context) {
 	}
 
 	// Verify password
-	verified := CheckPasswordHash(data.Password, restDb.PassHash)
+	verified := crypto.CheckPasswordHash(data.Password, restDb.PassHash)
 	if !verified {
 		c.JSON(403, gin.H{"error": "sorry bro, invalid password"})
 		return
 	}
 
 	// Redeem card
-	err = database.SubtractCredit(data.CardID, data.Amount)
+	err = database.SubtractCredit(uuid, data.Amount)
 	if err != nil {
 		c.JSON(403, gin.H{"error": err.Error()})
 		return
@@ -943,13 +854,6 @@ func PublishRestaurant(c *gin.Context) {
 		return
 	}
 
-	// Look up user
-	userDb := database.DoesUserExist(email)
-	if userDb.Name == "nil" {
-		c.JSON(403, gin.H{"error": "Unable to find that restaurant."})
-		return
-	}
-
 	// Check restaurant details
 	if restDb.Name == "" || restDb.Description == "" {
 		c.JSON(403, gin.H{"error": "Unable to find restaurant name or description."})
@@ -957,7 +861,7 @@ func PublishRestaurant(c *gin.Context) {
 	}
 
 	// Check square
-	if userDb.Square.AccessToken == "" {
+	if restDb.Square.AccessToken == "" {
 		c.JSON(403, gin.H{"error": "Unable to find restaurant square integration."})
 		return
 	}

@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/rishabh-bector/BenevolentBitesBack/auth"
+	"github.com/rishabh-bector/BenevolentBitesBack/crypto"
+
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -140,7 +142,16 @@ func GetUserCards(user string) ([]Card, error) {
 		result = append(result, card)
 	}
 
-	return result, nil
+	a := result[:0]
+	for _, card := range result {
+		card.UUID, err = crypto.SignString(card.UUID)
+		if err != nil {
+			return nil, err
+		}
+		a = append(a, card)
+	}
+
+	return a, nil
 }
 
 // DoesCardExist searches Mongo for a Card

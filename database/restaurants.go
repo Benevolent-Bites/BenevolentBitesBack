@@ -25,14 +25,14 @@ type Restaurant struct {
 	Yelp         string              `bson:"yelp" json:"yelp"`
 	Description  string              `bson:"description" json:"description"`
 	Employees    []map[string]string `bson:"employees" json:"employees"`
+	Square       auth.SquareAuth     `bson:"square" json:"square"`
 
 	// Constant
-	UUID       string `bson:"uuid" json:"uuid"`
-	PlaceID    string `bson:"placeId" json:"placeId"`
-	PassHash   string `bson:"passHash" json:"passHash"`
-	LocationID string `bson:"locationId" json:"locationId"`
-	Verified   bool   `bson:"verified" json:"verified"`
-	Published  bool   `bson:"published" json:"published"`
+	UUID      string `bson:"uuid" json:"uuid"`
+	PlaceID   string `bson:"placeId" json:"placeId"`
+	PassHash  string `bson:"passHash" json:"passHash"`
+	Verified  bool   `bson:"verified" json:"verified"`
+	Published bool   `bson:"published" json:"published"`
 }
 
 // UpdateRestaurant adds a new restaurant into the DB if it doesn't yet exist
