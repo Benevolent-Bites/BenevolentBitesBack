@@ -127,9 +127,9 @@ func UpdateRestaurantSquareAuth(owner string, s auth.SquareAuth) error {
 	defer cancel()
 
 	// Update existing restaurant
-	filter := bson.D{{"email", owner}}
+	filter := bson.D{{"owner", owner}}
 	update := bson.D{{"$set", bson.D{{"square", s}}}}
-	UserCollection.UpdateOne(ctx, filter, update)
+	RestCollection.UpdateOne(ctx, filter, update)
 
 	return nil
 }
