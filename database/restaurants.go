@@ -168,6 +168,9 @@ func MergeRestaurants(uOld, uNew Restaurant) Restaurant {
 					}
 				}
 			}
+			if k == "square" {
+				mOut[k] = auth.MergeSquareAuths(uOld.Square, uNew.Square)
+			}
 		}
 	}
 
