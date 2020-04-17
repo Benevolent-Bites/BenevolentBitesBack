@@ -47,6 +47,7 @@ import (
 // /rest/verifycall - calls the restaurants number from Google to verify them
 // /rest/verifycode - verifies the call code to that which the user entered
 // /rest/publish - makes sure that the new restaurant has: information, square, employees, and phone verification
+// /rest/contract - indicates that the restaurant has agreed to the terms of service, and signed the contract
 //
 // Square:
 //
@@ -127,6 +128,7 @@ func main() {
 	Router.GET("/rest/getlocations", GetLocations)
 	Router.GET("/rest/setlocation", SetLocation)
 	Router.GET("/rest/publish", PublishRestaurant)
+	Router.GET("/rest/contract", SignContract)
 
 	Router.GET("/user/signup", StartUSEROAuth2Flow)
 	Router.GET("/user/getavatar", GetUserAvatar)
@@ -279,6 +281,8 @@ func GetRestaurantInfo(c *gin.Context) {
 		"description": r.Description,
 		"employees":   r.Employees,
 		"published":   r.Published,
+		"verified":    r.Verified,
+		"signed":      r.Signed,
 	}
 
 	if r.Square.MerchantID != "" {
@@ -490,21 +494,21 @@ func BeginPaymentFlow(c *gin.Context) {
 	// Make sure restaurant exists
 	r := database.DoesRestaurantExistUUID(c.Query("restId"))
 	if r.Owner == "nil" {
-		c.JSON(403, gin.H{"error": "sorry bro, unable to find that restaurant"})
+		c.JSON(303, fmt.Sprintf("%s?%s", os.Getenv("S_FRONT"), "error=sorry bro, could not find that restaurant"))
 		return
 	}
 
 	amount, err := strconv.Atoi(c.Query("amount"))
 	if err != nil {
 		log.Error(err)
-		c.JSON(403, gin.H{"error": "sorry bro, invalid amount"})
+		c.JSON(303, fmt.Sprintf("%s?%s", os.Getenv("S_FRONT"), "error=sorry bro, invalid amount"))
 		return
 	}
 
 	checkout, err := auth.CreateCheckout(amount, r.Square.LocationID, r.Name, &r.Square)
 	if err != nil {
 		log.Error(err)
-		c.JSON(403, gin.H{"error": "sorry bro, could not create a checkout"})
+		c.JSON(303, fmt.Sprintf("%s?%s", os.Getenv("S_FRONT"), "error=sorry bro, could not create a checkout"))
 		return
 	}
 
@@ -903,7 +907,46 @@ func PublishRestaurant(c *gin.Context) {
 
 	// Publish restaurant
 	restDb.Published = true
-	database.UpdateRestaurant(email, restDb)
+	err = database.UpdateRestaurant(email, restDb)
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": "sorry bro, could not update restaurant database"})
+		return
+	}
+
+	c.JSON(200, gin.H{})
+}
+
+func SignContract(c *gin.Context) {
+	// Obtain and validate google token
+	token, err := c.Cookie("bb-access")
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": "Unable to find cookie token. Please login again."})
+		return
+	}
+
+	verify, err := auth.ValidateToken(token)
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": err.Error()})
+		return
+	}
+	owner := verify["email"].(string)
+
+	restDb := database.DoesRestaurantExist(owner)
+	if restDb.Owner == "nil" {
+		c.JSON(403, gin.H{"error": "sorry bro, could not find that restaurant"})
+		return
+	}
+	restDb.Signed = true
+
+	err = database.UpdateRestaurant(owner, restDb)
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": "sorry bro, could not update restaurant database"})
+		return
+	}
 
 	c.JSON(200, gin.H{})
 }
