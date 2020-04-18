@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/rishabh-bector/BenevolentBitesBack/database"
+	log "github.com/sirupsen/logrus"
 
 	"googlemaps.github.io/maps"
 )
@@ -32,15 +33,15 @@ type SearchResponse struct {
 }
 
 type APIDetails struct {
-	Name              string  `json:"name"`
-	Address           string  `json:"address"`
-	Latitude          float64 `json:"latitude"`
-	Longitude         float64 `json:"longitude"`
-	Image             string  `json:"image"`
-	Rating            float32 `json:"rating"`
-	PriceLevel        int     `json:"priceLevel"`
-	CustomDescription string  `json:"description"`
-	RestID            string  `json:"restID"`
+	Name        string  `json:"name"`
+	Address     string  `json:"address"`
+	Latitude    float64 `json:"latitude"`
+	Longitude   float64 `json:"longitude"`
+	Image       string  `json:"image"`
+	Rating      float32 `json:"rating"`
+	PriceLevel  int     `json:"priceLevel"`
+	Description string  `json:"description"`
+	RestID      string  `json:"restID"`
 }
 
 // SearchCoords searches for restaurants around the Coords of the origin, based
@@ -76,7 +77,7 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 
 		d := APIDetails{
 			Name:       places[p].Name,
-			Address:    places[p].FormattedAddress,
+			Address:    places[p].Vicinity,
 			Latitude:   places[p].Geometry.Location.Lat,
 			Longitude:  places[p].Geometry.Location.Lng,
 			Rating:     places[p].Rating,
@@ -92,7 +93,7 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 
 			sr.Off = append(sr.Off, d)
 		} else {
-			d.CustomDescription = r.Description
+			d.Description = r.Description
 			d.RestID = r.UUID
 			d.Name = r.Name
 
@@ -154,22 +155,32 @@ func GetPlaceDetails(placeID string) (maps.PlaceDetailsResult, error) {
 	var res map[string]interface{}
 	body, err := SendGAPIRequest("https://maps.googleapis.com/maps/api/place/details/json", params)
 	if err != nil {
+		log.Error(err.Error())
 		return maps.PlaceDetailsResult{}, err
 	}
 
 	err = json.Unmarshal(body, &res)
 	if err != nil {
+		log.Errorf("error unmarshaling google response, %s", err.Error())
+		file, err := os.Create("log.txt")
+		file.Write(body)
 		return maps.PlaceDetailsResult{}, err
+	}
+
+	if _, ok := res["result"]; !ok {
+		return maps.PlaceDetailsResult{}, fmt.Errorf("%s", res)
 	}
 
 	var resMain maps.PlaceDetailsResult
 	body2, err := json.Marshal(res["result"].(map[string]interface{}))
 	if err != nil {
+		log.Errorf("error marshaling, %s", err.Error())
 		return maps.PlaceDetailsResult{}, err
 	}
 
 	err = json.Unmarshal(body2, &resMain)
 	if err != nil {
+		log.Errorf("error unmarshaling google response [result]", err.Error())
 		return maps.PlaceDetailsResult{}, err
 	}
 
@@ -200,8 +211,10 @@ func SendGAPIRequest(url string, params map[string]string) ([]byte, error) {
 	for i := 0; i < len(onlydouble); i++ {
 		if onlydouble[i] == rune('"') {
 			if onlydouble[i+1] != rune(',') && onlydouble[i+1] != rune('}') && onlydouble[i+1] != rune(']') && onlydouble[i+1] != rune(':') {
-				if onlydouble[i-1] != rune(' ') && onlydouble[i-1] != rune('{') && onlydouble[i-1] != rune('[') {
-					onlydouble[i] = '\''
+				if onlydouble[i-1] != rune('{') && onlydouble[i-1] != rune('[') {
+					if i > 1 && !(onlydouble[i-1] == rune(' ') && (onlydouble[i-2] == rune(':') || onlydouble[i-2] == rune(','))) {
+						onlydouble[i] = '\''
+					}
 				}
 			}
 		}

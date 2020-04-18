@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/rishabh-bector/BenevolentBitesBack/auth"
+	"github.com/rishabh-bector/BenevolentBitesBack/crypto"
+
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -23,6 +25,7 @@ type Transaction struct {
 	Timestamp string `bson:"timestamp" json:"timestamp"`
 	Amount    int    `bson:"amount" json:"amount"`
 	ID        string `bson:"id" json:"id"`
+	Signature string `bson:"signature" json:"signature"`
 }
 
 var NilCard = Card{UUID: "nil"}
@@ -89,7 +92,7 @@ func AddCredit(id, transaction_id string, amount int) error {
 }
 
 // SubtractCredit removes credit from an already existing card
-func SubtractCredit(id string, amount int) error {
+func SubtractCredit(id string, amount int, signature string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -112,6 +115,7 @@ func SubtractCredit(id string, amount int) error {
 		ID:        "",
 		Timestamp: time.Now().Format(time.RFC3339),
 		Amount:    -1 * amount,
+		Signature: signature,
 	}
 	c.Transactions = append(c.Transactions, trans)
 
@@ -144,7 +148,16 @@ func GetUserCards(user string) ([]Card, error) {
 		result = append(result, card)
 	}
 
-	return result, nil
+	a := result[:0]
+	for _, card := range result {
+		card.UUID, err = crypto.SignString(card.UUID)
+		if err != nil {
+			return nil, err
+		}
+		a = append(a, card)
+	}
+
+	return a, nil
 }
 
 // DoesCardExist searches Mongo for a Card
