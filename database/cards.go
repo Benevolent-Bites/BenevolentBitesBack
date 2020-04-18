@@ -32,6 +32,10 @@ func CreateCard(user string, restaurant string, trans Transaction) (Card, error)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	// Make sure time is in correct format
+	t := time.Now().Format(time.RFC3339)
+	trans.Timestamp = t
+
 	c := Card{
 		UUID:         auth.GenerateUUID(),
 		RestUUID:     restaurant,
@@ -157,4 +161,30 @@ func DoesCardExist(uuid string) Card {
 	}
 	cur.Decode(&result)
 	return result
+}
+
+// GetRestaurantCards retrieves all the cards which belong to a given restaurant
+func GetRestaurantCards(restUUID string) ([]Card, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	filter := bson.D{{"restaurant", restUUID}}
+	cur, err := CardCollection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	result := []Card{}
+
+	if cur.Err() == mongo.ErrNoDocuments {
+		return nil, errors.New("sorry bro, couldn't find any cards for that user")
+	}
+
+	for cur.Next(context.TODO()) {
+		var card Card
+		cur.Decode(&card)
+		result = append(result, card)
+	}
+
+	return result, nil
 }

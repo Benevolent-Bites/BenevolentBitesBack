@@ -940,7 +940,3 @@ func PublishRestaurant(c *gin.Context) {
 
 	c.JSON(200, gin.H{})
 }
-
-func CreateRestaurantReport(c *gin.Context) {
-
-}
