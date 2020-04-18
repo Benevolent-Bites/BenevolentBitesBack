@@ -36,18 +36,24 @@ import (
 // Restaurants:
 //
 // /rest/signup - creates a new restaurant
+//
 // /rest/getinfo - returns all info
+// /rest/getdetails - returns detailed info about a restaurant using Google's API
 // /rest/setinfo - sets all info
+//
 // /rest/getlocations - gets all associated locations from square API
 // /rest/setlocation - sets location for a restaurant
-// /rest/getdetails - returns detailed info about a restaurant using Google's API
+//
+// /rest/verifycall - calls the restaurants number from Google to verify them
+// /rest/verifycode - verifies the call code to that which the user entered
+//
 // /rest/redeemcard - allows restaurant to subtract credit from their issued cards
 // /rest/setpassword - allows restaurant owner to set a password for staff to redeem customer cards
 // /rest/getphoto - returns photo of restaurant from Google Places API
-// /rest/verifycall - calls the restaurants number from Google to verify them
-// /rest/verifycode - verifies the call code to that which the user entered
 // /rest/publish - makes sure that the new restaurant has: information, square, employees, and phone verification
 // /rest/contract - indicates that the restaurant has agreed to the terms of service, and signed the contract
+//
+// /rest/report - returns all transaction info for a restaurant, given a certain time period
 //
 // Square:
 //
@@ -58,26 +64,13 @@ import (
 // Users:
 //
 // /user/signup - creates a new user
+//
 // /user/getinfo - returns all info
 // /user/setinfo - sets all info
+//
 // /user/getavatar - gets user's google avatar
-// /user/buy - allows user to purchase credit - see BeginPaymentFlow()
+// /user/buy - allows user to purchase credit, see BeginPaymentFlow()
 // /user/getcards - returns all of a user's cards and their balances
-//
-// --------------------
-// Environment variables
-// --------------------
-//
-// S_PORT: backend server port
-// S_ENV: DEV or PROD
-// S_FRONT: frontend redirct URL
-//
-// G_ID: google client id
-// G_SECRET: google client secret
-// G_REDIRECT: google redirect url
-//
-// M_URL: mongo db url
-// M_DB: mongo db name
 //
 
 var Router *gin.Engine
@@ -128,6 +121,7 @@ func main() {
 	Router.GET("/rest/getlocations", GetLocations)
 	Router.GET("/rest/setlocation", SetLocation)
 	Router.GET("/rest/publish", PublishRestaurant)
+	Router.GET("/rest/report", CreateRestaurantReport)
 	Router.GET("/rest/contract", SignContract)
 
 	Router.GET("/user/signup", StartUSEROAuth2Flow)
