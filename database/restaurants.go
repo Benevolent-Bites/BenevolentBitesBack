@@ -181,3 +181,22 @@ func MergeRestaurants(uOld, uNew Restaurant) Restaurant {
 
 	return ConvertMapToRest(mOut)
 }
+
+func GetAllPublishedRestaurants() []Restaurant {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	filter := bson.D{{"published", true}}
+	cur, err := RestCollection.Find(ctx, filter)
+	if err != nil {
+		log.Info(err)
+	}
+
+	var result []Restaurant
+	if cur.Err() == mongo.ErrNoDocuments {
+		return nil
+	}
+	cur.All(ctx, &result)
+
+	return result
+}

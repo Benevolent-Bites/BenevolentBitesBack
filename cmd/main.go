@@ -52,7 +52,6 @@ import (
 // /rest/getphoto - returns photo of restaurant from Google Places API
 // /rest/publish - makes sure that the new restaurant has: information, square, employees, and phone verification
 // /rest/contract - indicates that the restaurant has agreed to the terms of service, and signed the contract
-//
 // /rest/report - returns all transaction info for a restaurant, given a certain time period
 //
 // Square:
@@ -132,6 +131,8 @@ func main() {
 	Router.GET("/square/signup", StartSquareOAuth2Flow)
 	Router.GET("/square/oauth", HandleSquareOAuthCode)
 	Router.GET("/square/processcheckout", ProcessCheckout)
+
+	go StartEmployeeReportLoop()
 
 	Router.Run(os.Getenv("S_PORT")) // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }
