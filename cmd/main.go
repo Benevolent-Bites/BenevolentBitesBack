@@ -54,7 +54,6 @@ import (
 // /rest/contract - indicates that the restaurant has agreed to the terms of service, and signed the contract
 //
 // /rest/addphotos - uploads restaurant photos to GCP storage
-// /rest/getcustomphotos - gets list of all owner-uploaded photos
 // /rest/report - returns all transaction info for a restaurant, given a certain time period
 //
 // Square:
@@ -126,7 +125,6 @@ func main() {
 	Router.GET("/rest/report", CreateRestaurantReport)
 	Router.GET("/rest/contract", SignContract)
 	Router.POST("/rest/addphotos", RestAddPhotos)
-	Router.POST("/rest/getcustomphotos", RestGetCustomPhotos)
 
 	Router.GET("/user/signup", StartUSEROAuth2Flow)
 	Router.GET("/user/getavatar", GetUserAvatar)
@@ -610,12 +608,13 @@ func SearchCoords(c *gin.Context) {
 }
 
 type RestDetails struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Address     string `json:"address"`
-	Website     string `json:"website"`
-	Image       string `json:"image"`
-	Phone       string `json:"phone"`
+	Name         string   `json:"name"`
+	Description  string   `json:"description"`
+	Address      string   `json:"address"`
+	Website      string   `json:"website"`
+	Image        string   `json:"image"`
+	Phone        string   `json:"phone"`
+	CustomPhotos []string `json:"customPhotos"`
 }
 
 func GetRestaurantDetails(c *gin.Context) {
@@ -646,6 +645,7 @@ func GetRestaurantDetails(c *gin.Context) {
 	if dbRest.Owner != "nil" {
 		rd.Name = dbRest.Name
 		rd.Description = dbRest.Description
+		rd.CustomPhotos = dbRest.Photos
 	}
 
 	c.JSON(200, rd)
@@ -1016,17 +1016,4 @@ func RestAddPhotos(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{})
-}
-
-// Returns all user-uploaded photos from a restaurant's database struct
-func RestGetCustomPhotos(c *gin.Context) {
-	restId := c.Query("restId")
-
-	restDb := database.DoesRestaurantExistUUID(restId)
-	if restDb.Owner == "nil" {
-		c.JSON(403, gin.H{"error": "sorry bro, that restaurant does not exist"})
-		return
-	}
-
-	c.JSON(200, restDb.Photos)
 }
