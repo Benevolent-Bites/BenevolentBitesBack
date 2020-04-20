@@ -27,6 +27,7 @@ type Restaurant struct {
 	Verified     bool                `bson:"verified" json:"verified"`
 	Published    bool                `bson:"published" json:"published"`
 	Signed       bool                `bson:"signed" json:"signed"`
+	Photos       []string            `bson:"photos" json:"photos"`
 
 	// Constant
 	Owner    string          `bson:"owner" json:"owner"`
@@ -173,8 +174,19 @@ func MergeRestaurants(uOld, uNew Restaurant) Restaurant {
 				mOut[k] = auth.MergeSquareAuths(uOld.Square, uNew.Square)
 			}
 			if k == "published" || k == "signed" || k == "verified" {
-				mOut[k] = v.(bool)
-				log.Info("yeet")
+				if vc, ok := v.(bool); ok {
+					mOut[k] = vc
+				}
+			}
+			if k == "photos" {
+				if vc, ok := v.([]interface{}); ok {
+					if len(vc) > 0 {
+						mOut[k] = []string{}
+						for _, v2 := range vc {
+							mOut[k] = append(mOut[k].([]string), v2.(string))
+						}
+					}
+				}
 			}
 		}
 	}
