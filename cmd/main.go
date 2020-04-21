@@ -52,6 +52,8 @@ import (
 // /rest/getphoto - returns photo of restaurant from Google Places API
 // /rest/publish - makes sure that the new restaurant has: information, square, employees, and phone verification
 // /rest/contract - indicates that the restaurant has agreed to the terms of service, and signed the contract
+//
+// /rest/addphotos - uploads restaurant photos to GCP storage
 // /rest/report - returns all transaction info for a restaurant, given a certain time period
 //
 // Square:
@@ -122,6 +124,7 @@ func main() {
 	Router.GET("/rest/publish", PublishRestaurant)
 	Router.GET("/rest/report", CreateRestaurantReport)
 	Router.GET("/rest/contract", SignContract)
+	Router.POST("/rest/addphotos", RestAddPhotos)
 
 	Router.GET("/user/signup", StartUSEROAuth2Flow)
 	Router.GET("/user/getavatar", GetUserAvatar)
@@ -230,6 +233,8 @@ func SetRestaurantInfo(c *gin.Context) {
 	}
 	r.PlaceID = placeID
 
+	r.Photos = []string{}
+
 	err = database.UpdateRestaurant(email, r)
 	if err != nil {
 		log.Info(err)
@@ -278,6 +283,7 @@ func GetRestaurantInfo(c *gin.Context) {
 		"published":   r.Published,
 		"verified":    r.Verified,
 		"signed":      r.Signed,
+		"photos":      r.Photos,
 	}
 
 	if r.Square.MerchantID != "" {
@@ -474,14 +480,14 @@ func BeginPaymentFlow(c *gin.Context) {
 	token, err := c.Cookie("bb-access")
 	if err != nil {
 		log.Error(err)
-		c.JSON(403, gin.H{"error": "sorry bro, unable to find cookie token"})
+		c.Redirect(303, fmt.Sprintf("%s?error=%s", os.Getenv("S_FRONT"), "sorry bro, unable to find cookie token"))
 		return
 	}
 
 	verify, err := auth.ValidateToken(token)
 	if err != nil {
 		log.Error(err)
-		c.JSON(403, gin.H{"error": err.Error()})
+		c.Redirect(303, fmt.Sprintf("%s?error=%s", os.Getenv("S_FRONT"), err.Error()))
 		return
 	}
 	email := verify["email"].(string)
@@ -489,21 +495,21 @@ func BeginPaymentFlow(c *gin.Context) {
 	// Make sure restaurant exists
 	r := database.DoesRestaurantExistUUID(c.Query("restId"))
 	if r.Owner == "nil" {
-		c.JSON(303, fmt.Sprintf("%s?%s", os.Getenv("S_FRONT"), "error=sorry bro, could not find that restaurant"))
+		c.Redirect(303, fmt.Sprintf("%s?error=%s", os.Getenv("S_FRONT"), "sorry bro, could not find that restaurant"))
 		return
 	}
 
 	amount, err := strconv.Atoi(c.Query("amount"))
 	if err != nil {
 		log.Error(err)
-		c.JSON(303, fmt.Sprintf("%s?%s", os.Getenv("S_FRONT"), "error=sorry bro, invalid amount"))
+		c.Redirect(303, fmt.Sprintf("%s?error=%s", os.Getenv("S_FRONT"), "sorry bro, invalid amount"))
 		return
 	}
 
 	checkout, err := auth.CreateCheckout(amount, r.Square.LocationID, r.Name, &r.Square)
 	if err != nil {
 		log.Error(err)
-		c.JSON(303, fmt.Sprintf("%s?%s", os.Getenv("S_FRONT"), "error=sorry bro, could not create a checkout"))
+		c.Redirect(303, fmt.Sprintf("%s?error=%s", os.Getenv("S_FRONT"), "sorry bro, could not create a checkout"))
 		return
 	}
 
@@ -602,12 +608,13 @@ func SearchCoords(c *gin.Context) {
 }
 
 type RestDetails struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Address     string `json:"address"`
-	Website     string `json:"website"`
-	Image       string `json:"image"`
-	Phone       string `json:"phone"`
+	Name         string   `json:"name"`
+	Description  string   `json:"description"`
+	Address      string   `json:"address"`
+	Website      string   `json:"website"`
+	Image        string   `json:"image"`
+	Phone        string   `json:"phone"`
+	CustomPhotos []string `json:"customPhotos"`
 }
 
 func GetRestaurantDetails(c *gin.Context) {
@@ -638,6 +645,7 @@ func GetRestaurantDetails(c *gin.Context) {
 	if dbRest.Owner != "nil" {
 		rd.Name = dbRest.Name
 		rd.Description = dbRest.Description
+		rd.CustomPhotos = dbRest.Photos
 	}
 
 	c.JSON(200, rd)
@@ -941,6 +949,70 @@ func SignContract(c *gin.Context) {
 		log.Error(err)
 		c.JSON(403, gin.H{"error": "sorry bro, could not update restaurant database"})
 		return
+	}
+
+	c.JSON(200, gin.H{})
+}
+
+func RestAddPhotos(c *gin.Context) {
+	// Obtain and validate google token
+	token, err := c.Cookie("bb-access")
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": "Unable to find cookie token. Please login again."})
+		return
+	}
+
+	verify, err := auth.ValidateToken(token)
+	if err != nil {
+		log.Error(err)
+		c.JSON(403, gin.H{"error": err.Error()})
+		return
+	}
+	owner := verify["email"].(string)
+
+	restDb := database.DoesRestaurantExist(owner)
+	if restDb.Owner == "nil" {
+		c.JSON(403, gin.H{"error": "sorry bro, could not find that restaurant"})
+		return
+	}
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(403, gin.H{"error": "sorry bro, invalid form encoding"})
+		return
+	}
+
+	files, fok := form.File["new[]"]
+	deleted, dok := form.Value["deleted[]"]
+	if !fok {
+		if !dok {
+			c.JSON(403, gin.H{"error": "sorry bro, could not get photos from form data"})
+			return
+		}
+	}
+
+	links, err := UploadPhotos(files)
+	if err != nil {
+		c.JSON(403, gin.H{"error": "sorry bro, could not upload photo to storage server"})
+	}
+	restDb.Photos = append(restDb.Photos, links...)
+
+	if dok {
+		for _, url := range deleted {
+			for i, v := range restDb.Photos {
+				if v == url {
+					restDb.Photos[i] = restDb.Photos[len(restDb.Photos)-1]
+					restDb.Photos[len(restDb.Photos)-1] = ""
+					restDb.Photos = restDb.Photos[:len(restDb.Photos)-1]
+				}
+			}
+		}
+	}
+
+	err = database.UpdateRestaurant(owner, restDb)
+	if err != nil {
+		c.JSON(403, gin.H{"error": "sorry bro, could not update restaurant photos"})
 	}
 
 	c.JSON(200, gin.H{})
