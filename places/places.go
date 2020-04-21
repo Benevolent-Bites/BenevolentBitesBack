@@ -126,6 +126,8 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 }
 
 func ResolvePageToken(params map[string]string, tok string) (maps.PlacesSearchResponse, error) {
+	params["pagetoken"] = tok
+
 	var res maps.PlacesSearchResponse
 	body, err := SendGAPIRequest("https://maps.googleapis.com/maps/api/place/nearbysearch/json", params)
 	if err != nil {
