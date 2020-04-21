@@ -66,6 +66,25 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 	}
 
 	places := res.Results
+
+	// Gather more search results from page tokens
+	depth := 0
+	nToken := res.NextPageToken
+
+	for depth < 5 {
+		if nToken != "" {
+			nextRes, err := ResolvePageToken(params, res.NextPageToken)
+			if err != nil {
+				break
+			}
+			places = append(places, nextRes.Results...)
+			nToken = nextRes.NextPageToken
+			depth += 1
+		} else {
+			break
+		}
+	}
+
 	sr := SearchResponse{
 		On:  []APIDetails{},
 		Off: []APIDetails{},
@@ -104,6 +123,20 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 	}
 
 	return sr, nil
+}
+
+func ResolvePageToken(params map[string]string, tok string) (maps.PlacesSearchResponse, error) {
+	var res maps.PlacesSearchResponse
+	body, err := SendGAPIRequest("https://maps.googleapis.com/maps/api/place/nearbysearch/json", params)
+	if err != nil {
+		return maps.PlacesSearchResponse{}, err
+	}
+	err = json.Unmarshal(body, &res)
+	if err != nil {
+		return maps.PlacesSearchResponse{}, errors.New(err.Error() + " " + string(body))
+	}
+
+	return res, nil
 }
 
 func GetPlacePhoto(pr string) (maps.PlacePhotoResponse, int64, error) {
