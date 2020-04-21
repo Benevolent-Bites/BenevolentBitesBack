@@ -480,14 +480,14 @@ func BeginPaymentFlow(c *gin.Context) {
 	token, err := c.Cookie("bb-access")
 	if err != nil {
 		log.Error(err)
-		c.JSON(403, gin.H{"error": "sorry bro, unable to find cookie token"})
+		c.Redirect(303, fmt.Sprintf("%s?error=%s", os.Getenv("S_FRONT"), "sorry bro, unable to find cookie token"))
 		return
 	}
 
 	verify, err := auth.ValidateToken(token)
 	if err != nil {
 		log.Error(err)
-		c.JSON(403, gin.H{"error": err.Error()})
+		c.Redirect(303, fmt.Sprintf("%s?error=%s", os.Getenv("S_FRONT"), err.Error()))
 		return
 	}
 	email := verify["email"].(string)
@@ -495,21 +495,21 @@ func BeginPaymentFlow(c *gin.Context) {
 	// Make sure restaurant exists
 	r := database.DoesRestaurantExistUUID(c.Query("restId"))
 	if r.Owner == "nil" {
-		c.JSON(303, fmt.Sprintf("%s?%s", os.Getenv("S_FRONT"), "error=sorry bro, could not find that restaurant"))
+		c.Redirect(303, fmt.Sprintf("%s?error=%s", os.Getenv("S_FRONT"), "sorry bro, could not find that restaurant"))
 		return
 	}
 
 	amount, err := strconv.Atoi(c.Query("amount"))
 	if err != nil {
 		log.Error(err)
-		c.JSON(303, fmt.Sprintf("%s?%s", os.Getenv("S_FRONT"), "error=sorry bro, invalid amount"))
+		c.Redirect(303, fmt.Sprintf("%s?error=%s", os.Getenv("S_FRONT"), "sorry bro, invalid amount"))
 		return
 	}
 
 	checkout, err := auth.CreateCheckout(amount, r.Square.LocationID, r.Name, &r.Square)
 	if err != nil {
 		log.Error(err)
-		c.JSON(303, fmt.Sprintf("%s?%s", os.Getenv("S_FRONT"), "error=sorry bro, could not create a checkout"))
+		c.Redirect(303, fmt.Sprintf("%s?error=%s", os.Getenv("S_FRONT"), "sorry bro, could not create a checkout"))
 		return
 	}
 
