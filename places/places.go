@@ -75,7 +75,7 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 		if nToken != "" {
 			nextRes, err := ResolvePageToken(params, res.NextPageToken)
 			if err != nil {
-				break
+				log.Info(err)
 			}
 			places = append(places, nextRes.Results...)
 			nToken = nextRes.NextPageToken
