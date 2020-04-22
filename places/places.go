@@ -72,12 +72,14 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 	nToken := res.NextPageToken
 
 	for depth < 5 {
+		log.Info(places)
 		if nToken != "" {
-			nextRes, err := ResolvePageToken(params, res.NextPageToken)
+			nextRes, err := ResolvePageToken(params["key"], params["location"], params["radius"], res.NextPageToken)
 			if err != nil {
 				log.Info(err)
 			}
 			places = append(places, nextRes.Results...)
+
 			nToken = nextRes.NextPageToken
 			depth += 1
 		} else {
@@ -125,8 +127,13 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 	return sr, nil
 }
 
-func ResolvePageToken(params map[string]string, tok string) (maps.PlacesSearchResponse, error) {
-	params["pagetoken"] = tok
+func ResolvePageToken(key, location, radius, tok string) (maps.PlacesSearchResponse, error) {
+	params := map[string]string{
+		"key":       key,
+		"location":  location,
+		"radius":    radius,
+		"pagetoken": tok,
+	}
 
 	var res maps.PlacesSearchResponse
 	body, err := SendGAPIRequest("https://maps.googleapis.com/maps/api/place/nearbysearch/json", params)
