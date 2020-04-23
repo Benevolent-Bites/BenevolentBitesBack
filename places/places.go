@@ -58,11 +58,15 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 	var res maps.PlacesSearchResponse
 	body, err := SendGAPIRequest("https://maps.googleapis.com/maps/api/place/nearbysearch/json", params)
 	if err != nil {
+		log.Error(err)
 		return SearchResponse{}, err
 	}
 	err = json.Unmarshal(body, &res)
 	if err != nil {
-		return SearchResponse{}, errors.New(err.Error() + " " + string(body))
+		log.Error(err)
+		file, err := os.Create("log.txt")
+		file.Write(body)
+		return SearchResponse{}, err
 	}
 
 	places := res.Results
@@ -72,7 +76,6 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 	nToken := res.NextPageToken
 
 	for depth < 5 {
-		log.Info(places)
 		if nToken != "" {
 			nextRes, err := ResolvePageToken(params["key"], params["location"], params["radius"], res.NextPageToken)
 			if err != nil {
@@ -138,10 +141,14 @@ func ResolvePageToken(key, location, radius, tok string) (maps.PlacesSearchRespo
 	var res maps.PlacesSearchResponse
 	body, err := SendGAPIRequest("https://maps.googleapis.com/maps/api/place/nearbysearch/json", params)
 	if err != nil {
+		log.Error(err)
 		return maps.PlacesSearchResponse{}, err
 	}
 	err = json.Unmarshal(body, &res)
 	if err != nil {
+		log.Error(err)
+		file, err := os.Create("log.txt")
+		file.Write(body)
 		return maps.PlacesSearchResponse{}, errors.New(err.Error() + " " + string(body))
 	}
 
@@ -247,8 +254,9 @@ func SendGAPIRequest(url string, params map[string]string) ([]byte, error) {
 	out2 := strings.Replace(string(out), "True", "true", -1)
 	out3 := strings.Replace(string(out2), "False", "false", -1)
 	out4 := strings.Replace(string(out3), "\n", "", -1)
+	out5 := strings.Replace(string(out4), "\\", "", -1)
 
-	onlydouble := []rune(strings.Replace(string(out4), "'", "\"", -1))
+	onlydouble := []rune(strings.Replace(string(out5), "'", "\"", -1))
 
 	for i := 0; i < len(onlydouble); i++ {
 		if onlydouble[i] == rune('"') {
