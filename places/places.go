@@ -78,7 +78,7 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 	depth := 0
 	nToken, ok := tokRes["next_page_token"].(string)
 
-	for depth < 3 {
+	for depth < -1 {
 		log.Info("Sleeping...")
 		time.Sleep(1 * time.Second)
 		log.Info("Done!")
