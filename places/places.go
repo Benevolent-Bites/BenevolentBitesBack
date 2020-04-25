@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/rishabh-bector/BenevolentBitesBack/database"
 	log "github.com/sirupsen/logrus"
@@ -50,18 +51,20 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 	params := map[string]string{
 		"key":      GKey,
 		"location": fmt.Sprintf("%s,%s", lat, lng),
-		"radius":   fmt.Sprintf("%v", rngMiles*1600),
+		"rankby":   "distance",
 		"keyword":  query,
 		"type":     "restaurant",
 	}
 
 	var res maps.PlacesSearchResponse
+	var tokRes map[string]interface{}
 	body, err := SendGAPIRequest("https://maps.googleapis.com/maps/api/place/nearbysearch/json", params)
 	if err != nil {
 		log.Error(err)
 		return SearchResponse{}, err
 	}
 	err = json.Unmarshal(body, &res)
+	err = json.Unmarshal(body, &tokRes)
 	if err != nil {
 		log.Error(err)
 		file, err := os.Create("log.txt")
@@ -73,21 +76,32 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 
 	// Gather more search results from page tokens
 	depth := 0
-	nToken := res.NextPageToken
+	nToken, ok := tokRes["next_page_token"].(string)
 
-	for depth < 5 {
-		if nToken != "" {
-			nextRes, err := ResolvePageToken(params["key"], params["location"], params["radius"], res.NextPageToken)
-			if err != nil {
-				log.Info(err)
-			}
-			places = append(places, nextRes.Results...)
+	for depth < 3 {
+		log.Info("Sleeping...")
+		time.Sleep(1 * time.Second)
+		log.Info("Done!")
 
-			nToken = nextRes.NextPageToken
-			depth += 1
-		} else {
+		if !ok || nToken == "" {
+			log.Info("No page token found! (string conversion failure)")
 			break
+		} else {
+			log.Info("Resolving page token: ", nToken)
 		}
+
+		nextRes, nTok, err := ResolvePageToken(params["key"], nToken)
+		if err != nil {
+			log.Error(err)
+		}
+
+		log.Info("Received next page: ")
+		log.Infof("%+v\n", nextRes)
+
+		places = append(places, nextRes.Results...)
+
+		nToken = nTok
+		depth++
 	}
 
 	sr := SearchResponse{
@@ -130,29 +144,40 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 	return sr, nil
 }
 
-func ResolvePageToken(key, location, radius, tok string) (maps.PlacesSearchResponse, error) {
+func ResolvePageToken(key, tok string) (maps.PlacesSearchResponse, string, error) {
 	params := map[string]string{
 		"key":       key,
-		"location":  location,
-		"radius":    radius,
 		"pagetoken": tok,
 	}
 
+	log.Info(params)
+
 	var res maps.PlacesSearchResponse
+	var tokRes map[string]interface{}
 	body, err := SendGAPIRequest("https://maps.googleapis.com/maps/api/place/nearbysearch/json", params)
 	if err != nil {
 		log.Error(err)
-		return maps.PlacesSearchResponse{}, err
+		return maps.PlacesSearchResponse{}, "", err
 	}
 	err = json.Unmarshal(body, &res)
 	if err != nil {
 		log.Error(err)
+	}
+	err = json.Unmarshal(body, &tokRes)
+	if err != nil {
+		log.Error(err)
 		file, err := os.Create("log.txt")
 		file.Write(body)
-		return maps.PlacesSearchResponse{}, errors.New(err.Error() + " " + string(body))
+		return maps.PlacesSearchResponse{}, "", errors.New(err.Error() + " " + string(body))
 	}
 
-	return res, nil
+	nTok, ok := tokRes["next_page_token"].(string)
+	if ok {
+		return res, nTok, nil
+	}
+
+	log.Info("ResolvePage: ", string(body))
+	return res, "", nil
 }
 
 func GetPlacePhoto(pr string) (maps.PlacePhotoResponse, int64, error) {
