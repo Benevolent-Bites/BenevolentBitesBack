@@ -53,7 +53,6 @@ func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) 
 		"location": fmt.Sprintf("%s,%s", lat, lng),
 		"rankby":   "distance",
 		"keyword":  query,
-		"type":     "restaurant",
 	}
 
 	var res maps.PlacesSearchResponse
