@@ -897,7 +897,7 @@ func PublishRestaurant(c *gin.Context) {
 	}
 
 	// Check employees
-	if len(restDb.Employees) > 0 {
+	if len(restDb.Employees) == 0 {
 		c.JSON(403, gin.H{"error": "Unable to find restaurant employees."})
 		return
 	}
