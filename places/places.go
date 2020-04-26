@@ -53,7 +53,6 @@ func SearchCoords(query, lat, lng string, rngMiles float64, view string) (Search
 		"key":      GKey,
 		"location": fmt.Sprintf("%s,%s", lat, lng),
 		"keyword":  query,
-		"type":     "restaurant",
 	}
 
 	if view == "map" {
