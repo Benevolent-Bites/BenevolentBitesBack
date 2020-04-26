@@ -525,7 +525,7 @@ func ProcessCheckout(c *gin.Context) {
 	checkoutID := c.Query("checkoutId")
 
 	var checkout auth.Checkout
-	if co, ok := auth.OpenCheckouts[checkoutID]; !ok {
+	if co, ok := auth.OpenCheckouts[checkoutID]; ok {
 		checkout = *co
 		delete(auth.OpenCheckouts, checkoutID)
 	} else {
@@ -553,16 +553,16 @@ func ProcessCheckout(c *gin.Context) {
 		return
 	}
 
-	c.Redirect(303, fmt.Sprintf("%s/users/cards", os.Getenv("S_FRONT")))
+	c.Redirect(303, fmt.Sprintf("%s/users", os.Getenv("S_FRONT")))
 }
 
 // Helper to return ProcessCard errors
 func processCardError(c *gin.Context, err string) {
-	c.Data(403, "text/html", []byte(
-		fmt.Sprintf("%s/users/cards?&error=%s",
+	c.Redirect(303,
+		fmt.Sprintf("%s?&error=%s",
 			os.Getenv("S_FRONT"),
 			err,
-		)))
+		))
 }
 
 // GetUserCards returns all of a user's cards
@@ -592,13 +592,13 @@ func GetUserCards(c *gin.Context) {
 }
 
 func SearchCoords(c *gin.Context) {
-	i, err := strconv.Atoi(c.Query("range"))
+	i, err := strconv.ParseFloat(c.Query("range"), 32)
 	if err != nil {
 		c.JSON(403, gin.H{"error": err.Error()})
 		return
 	}
 
-	s, err := places.SearchCoords(c.Query("query"), c.Query("lat"), c.Query("lng"), i)
+	s, err := places.SearchCoords(c.Query("query"), c.Query("lat"), c.Query("lng"), i, c.Query("view"))
 	if err != nil {
 		c.JSON(403, gin.H{"error": err.Error()})
 		return

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -47,13 +48,18 @@ type APIDetails struct {
 
 // SearchCoords searches for restaurants around the Coords of the origin, based
 // on the query provided by the frontend
-func SearchCoords(query, lat, lng string, rngMiles int) (SearchResponse, error) {
+func SearchCoords(query, lat, lng string, rngMiles float64, view string) (SearchResponse, error) {
 	params := map[string]string{
 		"key":      GKey,
 		"location": fmt.Sprintf("%s,%s", lat, lng),
-		"rankby":   "distance",
 		"keyword":  query,
 		"type":     "restaurant",
+	}
+
+	if view == "map" {
+		params["radius"] = fmt.Sprintf("%.1f", math.Min(rngMiles*1600, 50000))
+	} else {
+		params["rankby"] = "distance"
 	}
 
 	var res maps.PlacesSearchResponse
