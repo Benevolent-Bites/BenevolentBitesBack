@@ -116,6 +116,11 @@ func SearchCoords(query, lat, lng string, rngMiles float64, view string) (Search
 
 	for p := range places {
 		pid := places[p].PlaceID
+
+		if !isFoodPlace(places[p].Types) {
+			continue
+		}
+
 		r := database.DoesRestaurantExistPlaceID(pid)
 
 		d := APIDetails{
@@ -301,4 +306,32 @@ func SendGAPIRequest(url string, params map[string]string) ([]byte, error) {
 	}
 
 	return []byte(string(onlydouble)), nil
+}
+
+var foodTypes = []string{
+	"bakery",
+	"bar",
+	"cafe",
+	"meal_delivery",
+	"meal_takeaway",
+	"restaurant",
+	"food",
+}
+
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
+
+func isFoodPlace(types []string) bool {
+	for _, t := range types {
+		if stringInSlice(t, foodTypes) {
+			return true
+		}
+	}
+	return false
 }
