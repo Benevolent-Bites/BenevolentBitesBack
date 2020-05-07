@@ -92,13 +92,10 @@ func main() {
 	Router = gin.Default()
 
 	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{os.Getenv("S_CORS")}
+	config.AllowOrigins = []string{os.Getenv("S_CORS"), os.Getenv("S_CORS_2")} // For backwards compatibility between .tech and .org domains
 	config.AllowCredentials = true
 	config.AllowMethods = []string{"POST", "GET", "OPTIONS"}
 	config.AllowHeaders = []string{"Origin", "Content-Type"}
-	config.AllowOriginFunc = func(origin string) bool {
-		return origin == os.Getenv("S_CORS")
-	}
 
 	Router.Use(cors.New(config))
 	Router.LoadHTMLGlob("../templates/*")
