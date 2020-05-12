@@ -92,6 +92,7 @@ func main() {
 	Router = gin.Default()
 
 	config := cors.DefaultConfig()
+	log.Info("ORIGINS ALLOWED: ", os.Getenv("S_CORS"), os.Getenv("S_CORS_2"))
 	config.AllowOrigins = []string{os.Getenv("S_CORS"), os.Getenv("S_CORS_2")} // For backwards compatibility between .tech and .org domains
 	config.AllowCredentials = true
 	config.AllowMethods = []string{"POST", "GET", "OPTIONS"}
