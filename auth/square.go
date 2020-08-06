@@ -153,7 +153,7 @@ func CreateCheckout(amount int, locationID string, restName string, s *SquareAut
 	var response map[string]interface{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return &Checkout{}, err
+		return &Checkout{}, fmt.Errorf("Error unmarshaling checkout data: %s", err.Error())
 	}
 
 	if checkout, ok := response["checkout"]; ok {

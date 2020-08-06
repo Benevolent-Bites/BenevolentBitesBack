@@ -187,6 +187,15 @@ func HandleOAuthCode(c *gin.Context) {
 	}
 	c.SetCookie("bb-access", t, 3600, "/", "", secure, false)
 
+	// Redirect users to terms of service if they have no cards yet
+	if cards, err := database.GetUserCards(u); (err != nil || len(cards) == 0) && strings.Contains(redirect, "users") {
+		redirect = strings.ReplaceAll(redirect, "&", "%26")
+		redirect = strings.ReplaceAll(redirect, "?", "%3F")
+		c.Data(200, "text/html", []byte(
+			fmt.Sprintf("<html><body onload=\"window.location.replace('%s/users/terms?state=%s&login=success');\"/></html>", os.Getenv("S_FRONT"), redirect)))
+		return
+	}
+
 	c.Data(200, "text/html", []byte(
 		fmt.Sprintf("<html><body onload=\"window.location.replace('%s&login=%s&error=%s');\"/></html>",
 			redirect,
@@ -235,7 +244,7 @@ func SetRestaurantInfo(c *gin.Context) {
 
 	err = database.UpdateRestaurant(email, r)
 	if err != nil {
-		log.Info(err)
+		log.Error(err)
 		c.JSON(403, gin.H{"error": err.Error()})
 		return
 	}

@@ -61,8 +61,6 @@ func SearchCoords(query, lat, lng string, rngMiles float64, view string) (Search
 		params["rankby"] = "distance"
 	}
 
-	log.Info(params)
-
 	var res maps.PlacesSearchResponse
 	var tokRes map[string]interface{}
 	body, err := SendGAPIRequest("https://maps.googleapis.com/maps/api/place/nearbysearch/json", params)
@@ -70,7 +68,6 @@ func SearchCoords(query, lat, lng string, rngMiles float64, view string) (Search
 		log.Error(err)
 		return SearchResponse{}, err
 	}
-	log.Info(string(body))
 	err = json.Unmarshal(body, &res)
 	err = json.Unmarshal(body, &tokRes)
 	if err != nil {
@@ -104,7 +101,6 @@ func SearchCoords(query, lat, lng string, rngMiles float64, view string) (Search
 		}
 
 		log.Info("Received next page: ")
-		log.Infof("%+v\n", nextRes)
 
 		places = append(places, nextRes.Results...)
 
@@ -163,8 +159,6 @@ func ResolvePageToken(key, tok string) (maps.PlacesSearchResponse, string, error
 		"pagetoken": tok,
 	}
 
-	log.Info(params)
-
 	var res maps.PlacesSearchResponse
 	var tokRes map[string]interface{}
 	body, err := SendGAPIRequest("https://maps.googleapis.com/maps/api/place/nearbysearch/json", params)
@@ -189,7 +183,6 @@ func ResolvePageToken(key, tok string) (maps.PlacesSearchResponse, string, error
 		return res, nTok, nil
 	}
 
-	log.Info("ResolvePage: ", string(body))
 	return res, "", nil
 }
 
